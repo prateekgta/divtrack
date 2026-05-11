@@ -13,12 +13,16 @@ public record StockDto(
         BigDecimal previousClose,
         BigDecimal changePct,
         String country,
-        String category
+        String category,
+        BigDecimal parValue,
+        boolean nonCumulative,
+        String tags
 ) {
     public static StockDto from(io.divtrack.market.domain.model.Stock stock) {
         return new StockDto(stock.getId(), stock.getTicker(), stock.getName(),
                 stock.getSector(), stock.getPrice(), stock.getYieldPct(),
                 stock.getDividendFrequency(), stock.getPreviousClose(),
-                stock.getChangePct(), stock.getCountry(), stock.getCategory());
+                stock.getChangePct(), stock.getCountry(), stock.getCategory(),
+                stock.getParValue(), stock.isNonCumulative(), stock.getTags());
     }
 }

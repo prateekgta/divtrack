@@ -19,25 +19,28 @@ public class TestDataSeeder {
         if (stockRepository.count() > 200) return;
 
         // ── HIGH YIELD (>8%) ──────────────────────────────────────────────
-        seed("AGNC", "AGNC Investment", "Real Estate", 9.87, 14.00, "MONTHLY", "US", "high_yield");
-        seed("CLM", "Cornerstone Strategic Value Fund", "Fund", 6.10, 17.00, "MONTHLY", "US", "high_yield");
-        seed("ORC", "Orchid Island Capital", "Real Estate", 8.40, 16.00, "MONTHLY", "US", "high_yield");
-        seed("OXLC", "Oxford Lane Capital", "Fund", 5.20, 14.00, "MONTHLY", "US", "high_yield");
-        seed("PDI", "PIMCO Dynamic Income Fund", "Fund", 23.40, 13.00, "MONTHLY", "US", "high_yield");
-        seed("PDO", "PIMCO Dynamic Opportunity Fund", "Fund", 13.20, 11.00, "MONTHLY", "US", "high_yield");
-        seed("ECC", "Eagle Point Credit", "Fund", 9.80, 13.00, "MONTHLY", "US", "high_yield");
-        seed("GOF", "Guggenheim Strategic Opportunities", "Fund", 14.50, 12.00, "MONTHLY", "US", "high_yield");
-        seed("ARR", "ARMOUR Residential REIT", "Real Estate", 20.10, 12.50, "MONTHLY", "US", "high_yield");
-        seed("TWO", "Two Harbors Investment", "Real Estate", 12.80, 14.20, "QUARTERLY", "US", "high_yield");
-        seed("NLY", "Annaly Capital Management", "Real Estate", 18.90, 13.50, "QUARTERLY", "US", "high_yield");
-        seed("IVR", "Invesco Mortgage Capital", "Real Estate", 7.20, 16.50, "QUARTERLY", "US", "high_yield");
-        seed("DX", "Dynex Capital", "Real Estate", 12.40, 12.80, "QUARTERLY", "US", "high_yield");
-        seed("MFA", "MFA Financial", "Real Estate", 10.60, 12.00, "QUARTERLY", "US", "high_yield");
-        seed("RITM", "Rithm Capital", "Real Estate", 10.80, 9.20, "QUARTERLY", "US", "high_yield");
-        seed("NYMT", "New York Mortgage Trust", "Real Estate", 7.50, 14.20, "QUARTERLY", "US", "high_yield");
-        seed("ET", "Energy Transfer", "Energy", 16.20, 8.10, "QUARTERLY", "US", "high_yield");
-        seed("EPD", "Enterprise Products Partners", "Energy", 29.80, 7.20, "QUARTERLY", "US", "high_yield");
-        seed("STRD", "Strategy 10% Series A Perpetual Preferred", "Financial", 78.00, 12.80, "QUARTERLY", "US", "high_yield");
+        seed("AGNC", "AGNC Investment", "Real Estate", 9.87, 14.00, "MONTHLY", "US", "high_yield", null, false, "mREIT,monthly-payer");
+        seed("CLM", "Cornerstone Strategic Value Fund", "Fund", 6.10, 17.00, "MONTHLY", "US", "high_yield", null, false, "closed-end-fund,monthly-payer");
+        seed("ORC", "Orchid Island Capital", "Real Estate", 8.40, 16.00, "MONTHLY", "US", "high_yield", null, false, "mREIT,monthly-payer");
+        seed("OXLC", "Oxford Lane Capital", "Fund", 5.20, 14.00, "MONTHLY", "US", "high_yield", null, false, "closed-end-fund,monthly-payer");
+        seed("PDI", "PIMCO Dynamic Income Fund", "Fund", 23.40, 13.00, "MONTHLY", "US", "high_yield", null, false, "closed-end-fund,monthly-payer");
+        seed("PDO", "PIMCO Dynamic Opportunity Fund", "Fund", 13.20, 11.00, "MONTHLY", "US", "high_yield", null, false, "closed-end-fund,monthly-payer");
+        seed("ECC", "Eagle Point Credit", "Fund", 9.80, 13.00, "MONTHLY", "US", "high_yield", null, false, "closed-end-fund,monthly-payer");
+        seed("GOF", "Guggenheim Strategic Opportunities", "Fund", 14.50, 12.00, "MONTHLY", "US", "high_yield", null, false, "closed-end-fund,monthly-payer");
+        seed("ARR", "ARMOUR Residential REIT", "Real Estate", 20.10, 12.50, "MONTHLY", "US", "high_yield", null, false, "mREIT,monthly-payer");
+        seed("TWO", "Two Harbors Investment", "Real Estate", 12.80, 14.20, "QUARTERLY", "US", "high_yield", null, false, "mREIT");
+        seed("NLY", "Annaly Capital Management", "Real Estate", 18.90, 13.50, "QUARTERLY", "US", "high_yield", null, false, "mREIT");
+        seed("IVR", "Invesco Mortgage Capital", "Real Estate", 7.20, 16.50, "QUARTERLY", "US", "high_yield", null, false, "mREIT");
+        seed("DX", "Dynex Capital", "Real Estate", 12.40, 12.80, "QUARTERLY", "US", "high_yield", null, false, "mREIT");
+        seed("MFA", "MFA Financial", "Real Estate", 10.60, 12.00, "QUARTERLY", "US", "high_yield", null, false, "mREIT");
+        seed("RITM", "Rithm Capital", "Real Estate", 10.80, 9.20, "QUARTERLY", "US", "high_yield", null, false, "mREIT");
+        seed("NYMT", "New York Mortgage Trust", "Real Estate", 7.50, 14.20, "QUARTERLY", "US", "high_yield", null, false, "mREIT");
+        seed("ET", "Energy Transfer", "Energy", 16.20, 8.10, "QUARTERLY", "US", "high_yield", null, false, "mlp");
+        seed("EPD", "Enterprise Products Partners", "Energy", 29.80, 7.20, "QUARTERLY", "US", "high_yield", null, false, "mlp");
+        seed("STRD", "Strategy 10% Series A Perpetual Preferred", "Financial", 78.00, 12.80, "QUARTERLY", "US", "high_yield", BigDecimal.valueOf(100), true, "preferred-stock,perpetual-preferred,bitcoin-exposed");
+        seed("STRC", "Strategy 8% Series A Perpetual Strike Preferred", "Financial", 52.00, 15.40, "MONTHLY", "US", "high_yield", BigDecimal.valueOf(100), true, "preferred-stock,perpetual-preferred,bitcoin-exposed");
+        seed("STRK", "Strategy Series A Perpetual Strike Preferred", "Financial", 12.50, 14.20, "QUARTERLY", "US", "high_yield", BigDecimal.valueOf(25), true, "preferred-stock,perpetual-preferred,bitcoin-exposed");
+        seed("STRF", "Strategy 10% Series A Perpetual Stride Preferred", "Financial", 90.00, 11.10, "QUARTERLY", "US", "high_yield", BigDecimal.valueOf(100), false, "preferred-stock,perpetual-preferred,bitcoin-exposed,cumulative");
 
         // ── MONTHLY INCOME ────────────────────────────────────────────────
         seed("O", "Realty Income", "Real Estate", 58.40, 5.80, "MONTHLY", "US", "monthly_income");
@@ -192,11 +195,18 @@ public class TestDataSeeder {
     }
 
     private void seed(String ticker, String name, String sector, double price, double yield, String freq, String country, String category) {
+        seed(ticker, name, sector, price, yield, freq, country, category, null, false, null);
+    }
+
+    private void seed(String ticker, String name, String sector, double price, double yield, String freq, String country, String category, java.math.BigDecimal parValue, boolean nonCumulative, String tags) {
         Stock s = stockRepository.findByTicker(ticker).orElseGet(() -> new Stock(ticker, name, sector));
         s.updatePrice(BigDecimal.valueOf(price), BigDecimal.valueOf(yield));
         s.setDividendFrequency(freq);
         s.setCountry(country);
         s.setCategory(category);
+        s.setParValue(parValue);
+        s.setNonCumulative(nonCumulative);
+        s.setTags(tags);
         stockRepository.save(s);
     }
 }

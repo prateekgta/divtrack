@@ -8,6 +8,7 @@ interface Stock {
   id: string; ticker: string; name: string; sector: string;
   price: number; yieldPct: number; dividendFrequency: string;
   previousClose: number; changePct: number; country: string; category: string;
+  parValue: number | null; nonCumulative: boolean; tags: string | null;
 }
 
 const CATEGORIES = [
@@ -129,6 +130,12 @@ export function StockBrowser({ onSelect }: { onSelect: (ticker: string, name: st
 function StockRow({ stock: s, onSelect, onDetail, rank }: {
   stock: Stock; onSelect: () => void; onDetail: () => void; rank?: number
 }) {
+  const pv = s.parValue;
+  const hasPar = pv != null && pv > 0;
+  const discount = hasPar ? ((pv! - s.price) / pv! * 100) : 0;
+  const statedYield = hasPar && s.yieldPct > 0
+    ? (s.yieldPct / (s.price / pv!)) : null;
+
   return (
     <button type="button" onClick={onSelect}
       className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-forest-50/80 border border-transparent hover:border-forest-100 transition-all duration-200 text-left group">
@@ -137,8 +144,11 @@ function StockRow({ stock: s, onSelect, onDetail, rank }: {
         {s.dividendFrequency === 'MONTHLY' ? '📅' : '📆'}
       </div>
       <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2 flex-wrap">
+        <div className="flex items-center gap-1.5 flex-wrap">
           <p className="font-semibold text-earth-800 text-sm">{s.ticker}</p>
+          {s.nonCumulative && (
+            <span className="text-[9px] px-1 py-0.5 rounded bg-amber-100 text-amber-700 font-semibold leading-none">NC</span>
+          )}
           {s.changePct !== 0 && (
             <span className={`text-xs font-medium ${s.changePct >= 0 ? 'text-green-600' : 'text-red-500'}`}>
               {s.changePct >= 0 ? '▲' : '▼'} {Math.abs(s.changePct).toFixed(2)}%
@@ -150,9 +160,14 @@ function StockRow({ stock: s, onSelect, onDetail, rank }: {
         </div>
         <p className="text-xs text-earth-400 truncate">{s.name}</p>
       </div>
-      <div className="text-right shrink-0">
+      <div className="text-right shrink-0 min-w-0">
         <p className="font-bold text-forest-700 text-sm">{s.yieldPct.toFixed(2)}%</p>
         <p className="text-xs text-earth-400">${s.price.toFixed(2)}</p>
+        {hasPar && (
+          <p className={`text-[10px] ${discount > 0 ? 'text-green-600' : 'text-red-400'}`}>
+            Par ${s.parValue} {discount > 0 ? `${discount.toFixed(1)}% discount` : 'premium'}
+          </p>
+        )}
       </div>
       <button onClick={(e) => { e.stopPropagation(); onDetail(); }}
         className="opacity-0 group-hover:opacity-100 text-xs text-forest-600 hover:text-forest-700 font-medium px-2 py-1 rounded-lg hover:bg-forest-50 transition-all"

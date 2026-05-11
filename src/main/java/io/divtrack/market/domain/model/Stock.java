@@ -32,6 +32,15 @@ public class Stock extends BaseEntity {
     @Column(length = 50)
     private String country = "US";
 
+    @Column(name = "par_value", precision = 12, scale = 4)
+    private java.math.BigDecimal parValue;
+
+    @Column(name = "non_cumulative")
+    private boolean nonCumulative = false;
+
+    @Column(length = 200)
+    private String tags;
+
     @Column(length = 30)
     private String category = "income";
 
@@ -69,4 +78,10 @@ public class Stock extends BaseEntity {
     public void setCountry(String country) { this.country = country; }
     public String getCategory() { return category; }
     public void setCategory(String category) { this.category = category; }
+    public java.math.BigDecimal getParValue() { return parValue; }
+    public void setParValue(java.math.BigDecimal parValue) { this.parValue = parValue; }
+    public boolean isNonCumulative() { return nonCumulative; }
+    public void setNonCumulative(boolean nonCumulative) { this.nonCumulative = nonCumulative; }
+    public String getTags() { return tags; }
+    public void setTags(String tags) { this.tags = tags; }
 }
