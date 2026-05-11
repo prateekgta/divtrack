@@ -1,0 +1,41 @@
+server:
+  port: 8081
+
+spring:
+  application:
+    name: auth-service
+  datasource:
+    # Single DB, auth schema — currentSchema in URL sets Postgres search_path
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/divtrack?currentSchema=auth}
+    username: ${SPRING_DATASOURCE_USERNAME:divtrack}
+    password: ${SPRING_DATASOURCE_PASSWORD:localdev123}
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: false
+    properties:
+      hibernate:
+        default_schema: auth          # Hibernate generates SQL with auth. prefix
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+  flyway:
+    enabled: true
+    default-schema: auth             # Flyway creates flyway_schema_history in auth schema
+    schemas: auth                    # Flyway owns this schema
+    create-schemas: true             # Create auth schema if it doesn't exist
+    locations: classpath:db/migration
+
+jwt:
+  private-key: ${JWT_PRIVATE_KEY:}
+  public-key: ${JWT_PUBLIC_KEY:}
+  expiry-minutes: ${JWT_EXPIRY_MINUTES:15}
+  refresh-expiry-days: ${REFRESH_TOKEN_EXPIRY_DAYS:7}
+
+app:
+  base-url: ${APP_BASE_URL:http://localhost:3001}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health, info

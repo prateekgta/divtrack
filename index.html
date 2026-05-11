@@ -1,0 +1,809 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>DivTrack — Live Architecture</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: #0b1120;
+    color: #e2e8f0;
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  /* ── Header ── */
+  header {
+    padding: 14px 28px;
+    background: #0f1930;
+    border-bottom: 1px solid #1e3050;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-shrink: 0;
+  }
+  header h1 { font-size: 1.25rem; color: #93c5fd; letter-spacing: 0.05em; }
+  header h1 span { color: #60a5fa; font-weight: 800; }
+
+  .tabs { display: flex; gap: 8px; }
+  .tab {
+    padding: 7px 18px;
+    border-radius: 20px;
+    border: 1px solid #334155;
+    background: #1e293b;
+    color: #94a3b8;
+    cursor: pointer;
+    font-size: 0.8rem;
+    font-weight: 500;
+    transition: all 0.2s;
+  }
+  .tab:hover { border-color: #60a5fa; color: #bfdbfe; }
+  .tab.active { background: #1d4ed8; border-color: #3b82f6; color: #fff; }
+  .tab[data-flow="login"].active    { background: #065f46; border-color: #10b981; }
+  .tab[data-flow="holding"].active  { background: #78350f; border-color: #f59e0b; }
+  .tab[data-flow="prices"].active   { background: #7c1d1d; border-color: #ef4444; }
+
+  /* ── Main layout ── */
+  main {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+  }
+
+  /* ── SVG diagram ── */
+  #diagram-wrap {
+    flex: 1;
+    padding: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+  }
+  svg#diagram { width: 100%; height: 100%; max-height: 520px; }
+
+  /* ── Info panel ── */
+  #panel {
+    width: 320px;
+    background: #0f1930;
+    border-left: 1px solid #1e3050;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    flex-shrink: 0;
+  }
+  .panel-section { padding: 20px; }
+  .panel-section h2 { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.1em; color: #64748b; margin-bottom: 12px; }
+
+  /* Flow info cards */
+  .flow-info { display: none; flex-direction: column; gap: 0; height: 100%; overflow-y: auto; }
+  .flow-info.active { display: flex; }
+
+  .flow-title {
+    padding: 20px 20px 10px;
+    font-size: 1rem;
+    font-weight: 700;
+  }
+  .flow-desc {
+    padding: 0 20px 16px;
+    font-size: 0.78rem;
+    color: #94a3b8;
+    line-height: 1.6;
+  }
+
+  .steps { padding: 0 20px; display: flex; flex-direction: column; gap: 0; }
+  .step {
+    display: flex;
+    gap: 12px;
+    padding: 10px 0;
+    border-left: 2px solid #1e3050;
+    padding-left: 16px;
+    position: relative;
+    transition: all 0.3s;
+  }
+  .step::before {
+    content: '';
+    position: absolute;
+    left: -6px;
+    top: 14px;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: #1e3050;
+    border: 2px solid #334155;
+    transition: all 0.3s;
+  }
+  .step.active::before { background: var(--flow-color); border-color: var(--flow-color); box-shadow: 0 0 8px var(--flow-color); }
+  .step.done::before   { background: #334155; border-color: #334155; }
+
+  .step-num {
+    font-size: 0.65rem;
+    font-weight: 700;
+    color: #475569;
+    min-width: 18px;
+  }
+  .step-text {
+    font-size: 0.75rem;
+    color: #64748b;
+    line-height: 1.5;
+    transition: color 0.3s;
+  }
+  .step.active .step-text { color: #e2e8f0; }
+  .step.done   .step-text { color: #475569; }
+
+  /* Legend */
+  .legend { padding: 16px 20px; border-top: 1px solid #1e3050; margin-top: auto; }
+  .legend h2 { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.1em; color: #475569; margin-bottom: 10px; }
+  .legend-items { display: flex; flex-wrap: wrap; gap: 8px; }
+  .legend-item { display: flex; align-items: center; gap: 6px; font-size: 0.7rem; color: #64748b; }
+  .legend-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+
+  /* Click hint */
+  .click-hint {
+    padding: 12px 20px;
+    font-size: 0.7rem;
+    color: #475569;
+    text-align: center;
+    border-top: 1px solid #1e3050;
+  }
+
+  /* ── Service detail drawer ── */
+  #drawer {
+    position: fixed;
+    bottom: -100%;
+    left: 0; right: 0;
+    background: #0f1930;
+    border-top: 2px solid #1e3050;
+    padding: 24px 32px;
+    transition: bottom 0.35s cubic-bezier(0.4,0,0.2,1);
+    z-index: 100;
+    max-height: 280px;
+  }
+  #drawer.open { bottom: 0; }
+  #drawer-close {
+    position: absolute;
+    top: 16px; right: 20px;
+    background: none; border: none;
+    color: #64748b; cursor: pointer; font-size: 1.2rem;
+  }
+  #drawer-close:hover { color: #e2e8f0; }
+  #drawer h3 { font-size: 0.9rem; margin-bottom: 16px; }
+  .drawer-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; }
+  .drawer-item {
+    background: #1e293b;
+    border: 1px solid #334155;
+    border-radius: 8px;
+    padding: 12px;
+  }
+  .drawer-item .di-label { font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.08em; color: #64748b; margin-bottom: 4px; }
+  .drawer-item .di-val   { font-size: 0.78rem; color: #e2e8f0; font-family: monospace; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1><span>Div</span>Track — Architecture Explorer</h1>
+  <div class="tabs">
+    <button class="tab active"  data-flow="overview">Overview</button>
+    <button class="tab"         data-flow="login">Login Flow</button>
+    <button class="tab"         data-flow="holding">Add Holding</button>
+    <button class="tab"         data-flow="prices">Live Prices (WS)</button>
+  </div>
+</header>
+
+<main>
+  <div id="diagram-wrap">
+  <svg id="diagram" viewBox="0 0 980 480" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <!-- Arrowheads -->
+      <marker id="arr-gray"   markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#334155"/></marker>
+      <marker id="arr-blue"   markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#3b82f6"/></marker>
+      <marker id="arr-green"  markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#10b981"/></marker>
+      <marker id="arr-amber"  markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#f59e0b"/></marker>
+      <marker id="arr-red"    markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#ef4444"/></marker>
+      <marker id="arr-purple" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#a855f7"/></marker>
+
+      <!-- Glow filters -->
+      <filter id="glow-blue"><feGaussianBlur stdDeviation="3" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+      <filter id="glow-green"><feGaussianBlur stdDeviation="3" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+      <filter id="glow-amber"><feGaussianBlur stdDeviation="3" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+      <filter id="glow-red"><feGaussianBlur stdDeviation="3" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+    </defs>
+
+    <!-- ══════════════════════════════════════════
+         STATIC CONNECTION LINES (always visible)
+    ══════════════════════════════════════════ -->
+
+    <!-- Browser → Gateway -->
+    <line x1="145" y1="240" x2="225" y2="240" stroke="#1e3050" stroke-width="2" marker-end="url(#arr-gray)"/>
+
+    <!-- Gateway → Auth Service -->
+    <path d="M 340 220 L 340 100 L 410 100" stroke="#1e3050" stroke-width="2" fill="none" marker-end="url(#arr-gray)"/>
+    <!-- Gateway → Portfolio Service -->
+    <line x1="340" y1="240" x2="410" y2="240" stroke="#1e3050" stroke-width="2" marker-end="url(#arr-gray)"/>
+    <!-- Gateway → Market Data -->
+    <path d="M 340 260 L 340 380 L 410 380" stroke="#1e3050" stroke-width="2" fill="none" marker-end="url(#arr-gray)"/>
+
+    <!-- Auth Service → Auth DB -->
+    <line x1="540" y1="100" x2="625" y2="100" stroke="#1e3050" stroke-width="2" marker-end="url(#arr-gray)"/>
+    <!-- Portfolio Service → Portfolio DB -->
+    <line x1="540" y1="240" x2="625" y2="240" stroke="#1e3050" stroke-width="2" marker-end="url(#arr-gray)"/>
+    <!-- Market → Market DB -->
+    <line x1="540" y1="370" x2="625" y2="340" stroke="#1e3050" stroke-width="2" marker-end="url(#arr-gray)"/>
+    <!-- Market → Redis -->
+    <line x1="540" y1="390" x2="625" y2="410" stroke="#1e3050" stroke-width="2" marker-end="url(#arr-gray)"/>
+    <!-- Market → Yahoo (down) -->
+    <line x1="475" y1="408" x2="475" y2="445" stroke="#1e3050" stroke-width="1.5" stroke-dasharray="4 3" marker-end="url(#arr-gray)"/>
+
+    <!-- Redis → Gateway pub/sub (curved dashed) -->
+    <path d="M 660 430 Q 500 490 340 265" stroke="#2d1b4e" stroke-width="1.5" stroke-dasharray="5 4" fill="none" marker-end="url(#arr-purple)"/>
+
+    <!-- Portfolio → Redis (reads cached price) -->
+    <path d="M 540 255 Q 600 290 660 415" stroke="#1e3050" stroke-width="1.5" stroke-dasharray="3 3" fill="none" marker-end="url(#arr-gray)"/>
+
+    <!-- ══════════════════════════════════════════
+         FLOW HIGHLIGHT PATHS (shown per flow)
+    ══════════════════════════════════════════ -->
+
+    <!-- LOGIN FLOW highlights -->
+    <g id="flow-login-lines" opacity="0">
+      <line x1="145" y1="240" x2="225" y2="240" stroke="#10b981" stroke-width="2.5" marker-end="url(#arr-green)"/>
+      <path d="M 340 220 L 340 100 L 410 100" stroke="#10b981" stroke-width="2.5" fill="none" marker-end="url(#arr-green)"/>
+      <line x1="540" y1="100" x2="625" y2="100" stroke="#10b981" stroke-width="2.5" marker-end="url(#arr-green)"/>
+    </g>
+
+    <!-- ADD HOLDING FLOW highlights -->
+    <g id="flow-holding-lines" opacity="0">
+      <line x1="145" y1="240" x2="225" y2="240" stroke="#f59e0b" stroke-width="2.5" marker-end="url(#arr-amber)"/>
+      <line x1="340" y1="240" x2="410" y2="240" stroke="#f59e0b" stroke-width="2.5" marker-end="url(#arr-amber)"/>
+      <line x1="540" y1="240" x2="625" y2="240" stroke="#f59e0b" stroke-width="2.5" marker-end="url(#arr-amber)"/>
+      <path d="M 540 255 Q 600 290 660 415" stroke="#f59e0b" stroke-width="2" stroke-dasharray="5 3" fill="none" marker-end="url(#arr-amber)"/>
+    </g>
+
+    <!-- LIVE PRICES FLOW highlights -->
+    <g id="flow-prices-lines" opacity="0">
+      <line x1="475" y1="445" x2="475" y2="412" stroke="#ef4444" stroke-width="2.5" stroke-dasharray="4 3" marker-end="url(#arr-red)"/>
+      <line x1="540" y1="390" x2="625" y2="412" stroke="#ef4444" stroke-width="2.5" marker-end="url(#arr-red)"/>
+      <path d="M 660 430 Q 500 490 340 265" stroke="#ef4444" stroke-width="2.5" stroke-dasharray="5 4" fill="none" marker-end="url(#arr-red)"/>
+      <line x1="225" y1="240" x2="145" y2="240" stroke="#ef4444" stroke-width="2.5" marker-end="url(#arr-red)"/>
+    </g>
+
+    <!-- ══════════════════════════════════════════
+         ANIMATED PARTICLES (one per active flow)
+    ══════════════════════════════════════════ -->
+
+    <!-- Login particle (path: browser→gw→auth→authdb) -->
+    <circle id="p-login" r="7" fill="#10b981" filter="url(#glow-green)" opacity="0"/>
+    <!-- Holding particle (path: browser→gw→portfolio→redis) -->
+    <circle id="p-holding" r="7" fill="#f59e0b" filter="url(#glow-amber)" opacity="0"/>
+    <!-- Prices particle A (yahoo→market→redis) -->
+    <circle id="p-prices-a" r="7" fill="#ef4444" filter="url(#glow-red)" opacity="0"/>
+    <!-- Prices particle B (redis→gateway→browser) -->
+    <circle id="p-prices-b" r="7" fill="#a855f7" filter="url(#glow-red)" opacity="0"/>
+
+    <!-- ══════════════════════════════════════════
+         SERVICE BOXES — Column 1: Browser/Frontend
+    ══════════════════════════════════════════ -->
+
+    <!-- Browser -->
+    <g id="box-browser" class="service-box" data-id="browser" cursor="pointer">
+      <rect x="20" y="210" width="125" height="60" rx="10" fill="#0c2340" stroke="#3b82f6" stroke-width="1.5"/>
+      <text x="82" y="232" text-anchor="middle" fill="#93c5fd" font-size="9" font-weight="600" letter-spacing="0.05em">FRONTEND</text>
+      <text x="82" y="252" text-anchor="middle" fill="#bfdbfe" font-size="13" font-weight="700">Browser</text>
+      <text x="82" y="264" text-anchor="middle" fill="#60a5fa" font-size="8">Next.js 14 · TypeScript</text>
+    </g>
+
+    <!-- ══════════════════════════════════════════
+         Column 2: API Gateway
+    ══════════════════════════════════════════ -->
+
+    <g id="box-gateway" class="service-box" data-id="gateway" cursor="pointer">
+      <rect x="225" y="210" width="130" height="60" rx="10" fill="#1a0d33" stroke="#8b5cf6" stroke-width="1.5"/>
+      <text x="290" y="232" text-anchor="middle" fill="#c4b5fd" font-size="9" font-weight="600" letter-spacing="0.05em">JAVA · SPRING</text>
+      <text x="290" y="252" text-anchor="middle" fill="#ddd6fe" font-size="12" font-weight="700">API Gateway</text>
+      <text x="290" y="264" text-anchor="middle" fill="#a78bfa" font-size="8">Spring Cloud Gateway · :3000</text>
+    </g>
+
+    <!-- ══════════════════════════════════════════
+         Column 3: Three Services
+    ══════════════════════════════════════════ -->
+
+    <!-- Auth Service -->
+    <g id="box-auth" class="service-box" data-id="auth" cursor="pointer">
+      <rect x="410" y="72" width="130" height="56" rx="10" fill="#052e16" stroke="#10b981" stroke-width="1.5"/>
+      <text x="475" y="93" text-anchor="middle" fill="#6ee7b7" font-size="9" font-weight="600" letter-spacing="0.05em">JAVA · SPRING BOOT</text>
+      <text x="475" y="110" text-anchor="middle" fill="#a7f3d0" font-size="12" font-weight="700">Auth Service</text>
+      <text x="475" y="122" text-anchor="middle" fill="#34d399" font-size="8">BCrypt · RS256 JWT · :8081</text>
+    </g>
+
+    <!-- Portfolio Service -->
+    <g id="box-portfolio" class="service-box" data-id="portfolio" cursor="pointer">
+      <rect x="410" y="212" width="130" height="56" rx="10" fill="#2d1800" stroke="#f59e0b" stroke-width="1.5"/>
+      <text x="475" y="233" text-anchor="middle" fill="#fcd34d" font-size="9" font-weight="600" letter-spacing="0.05em">JAVA · SPRING BOOT</text>
+      <text x="475" y="250" text-anchor="middle" fill="#fde68a" font-size="12" font-weight="700">Portfolio Service</text>
+      <text x="475" y="262" text-anchor="middle" fill="#f59e0b" font-size="8">Holdings · Alerts · :8082</text>
+    </g>
+
+    <!-- Market Data Service -->
+    <g id="box-market" class="service-box" data-id="market" cursor="pointer">
+      <rect x="410" y="352" width="130" height="56" rx="10" fill="#2d0707" stroke="#ef4444" stroke-width="1.5"/>
+      <text x="475" y="373" text-anchor="middle" fill="#fca5a5" font-size="9" font-weight="600" letter-spacing="0.05em">JAVA · SPRING BOOT</text>
+      <text x="475" y="390" text-anchor="middle" fill="#fecaca" font-size="12" font-weight="700">Market Data</text>
+      <text x="475" y="402" text-anchor="middle" fill="#ef4444" font-size="8">Jsoup · Resilience4j · :8083</text>
+    </g>
+
+    <!-- ══════════════════════════════════════════
+         Column 4: Storage
+    ══════════════════════════════════════════ -->
+
+    <!-- Auth DB -->
+    <g id="box-authdb" class="service-box" data-id="authdb" cursor="pointer">
+      <rect x="625" y="72" width="120" height="56" rx="10" fill="#1e1b4b" stroke="#6366f1" stroke-width="1.5"/>
+      <text x="685" y="93" text-anchor="middle" fill="#a5b4fc" font-size="9" font-weight="600" letter-spacing="0.05em">POSTGRESQL 16</text>
+      <text x="685" y="110" text-anchor="middle" fill="#c7d2fe" font-size="12" font-weight="700">Auth DB</text>
+      <text x="685" y="122" text-anchor="middle" fill="#818cf8" font-size="8">users · refresh_tokens</text>
+    </g>
+
+    <!-- Portfolio DB -->
+    <g id="box-portfoliodb" class="service-box" data-id="portfoliodb" cursor="pointer">
+      <rect x="625" y="212" width="120" height="56" rx="10" fill="#1e1b4b" stroke="#6366f1" stroke-width="1.5"/>
+      <text x="685" y="233" text-anchor="middle" fill="#a5b4fc" font-size="9" font-weight="600" letter-spacing="0.05em">POSTGRESQL 16</text>
+      <text x="685" y="250" text-anchor="middle" fill="#c7d2fe" font-size="12" font-weight="700">Portfolio DB</text>
+      <text x="685" y="262" text-anchor="middle" fill="#818cf8" font-size="8">holdings · alerts</text>
+    </g>
+
+    <!-- Market DB -->
+    <g id="box-marketdb" class="service-box" data-id="marketdb" cursor="pointer">
+      <rect x="625" y="310" width="120" height="50" rx="10" fill="#1e1b4b" stroke="#6366f1" stroke-width="1.5"/>
+      <text x="685" y="330" text-anchor="middle" fill="#a5b4fc" font-size="9" font-weight="600" letter-spacing="0.05em">POSTGRESQL 16</text>
+      <text x="685" y="347" text-anchor="middle" fill="#c7d2fe" font-size="12" font-weight="700">Market DB</text>
+      <text x="685" y="357" text-anchor="middle" fill="#818cf8" font-size="8">stocks · price_history</text>
+    </g>
+
+    <!-- Redis -->
+    <g id="box-redis" class="service-box" data-id="redis" cursor="pointer">
+      <rect x="625" y="390" width="120" height="50" rx="10" fill="#3d0000" stroke="#dc2626" stroke-width="1.5"/>
+      <text x="685" y="410" text-anchor="middle" fill="#fca5a5" font-size="9" font-weight="600" letter-spacing="0.05em">REDIS 7</text>
+      <text x="685" y="427" text-anchor="middle" fill="#fecaca" font-size="12" font-weight="700">Redis</text>
+      <text x="685" y="437" text-anchor="middle" fill="#ef4444" font-size="8">Cache · Pub/Sub · Rate Limit</text>
+    </g>
+
+    <!-- ══════════════════════════════════════════
+         External: Yahoo Finance
+    ══════════════════════════════════════════ -->
+    <g id="box-yahoo">
+      <rect x="420" y="445" width="110" height="30" rx="6" fill="#1a1200" stroke="#ca8a04" stroke-width="1" stroke-dasharray="4 2"/>
+      <text x="475" y="464" text-anchor="middle" fill="#fbbf24" font-size="10" font-weight="600">Yahoo Finance</text>
+    </g>
+
+    <!-- Port labels on connections -->
+    <text x="185" y="234" fill="#334155" font-size="8" text-anchor="middle">HTTPS/WSS</text>
+    <text x="370" y="165" fill="#334155" font-size="7.5" text-anchor="middle">proxy</text>
+    <text x="370" y="318" fill="#334155" font-size="7.5" text-anchor="middle">proxy</text>
+    <text x="580" y="94" fill="#334155" font-size="7.5" text-anchor="middle">JPA</text>
+    <text x="580" y="234" fill="#334155" font-size="7.5" text-anchor="middle">JPA</text>
+    <text x="480" y="440" fill="#ca8a04" font-size="7.5" text-anchor="middle">scrape</text>
+    <text x="500" y="484" fill="#7c3aed" font-size="7.5" text-anchor="middle">Pub/Sub</text>
+
+    <!-- WebSocket label on gateway -->
+    <text x="285" y="196" fill="#a78bfa" font-size="7.5" text-anchor="middle">WS fan-out</text>
+    <line x1="285" y1="198" x2="285" y2="210" stroke="#4c1d95" stroke-width="1" stroke-dasharray="2 2"/>
+  </svg>
+  </div>
+
+  <!-- ── Info Panel ── -->
+  <div id="panel">
+
+    <!-- OVERVIEW -->
+    <div class="flow-info active" id="info-overview">
+      <div class="flow-title" style="color:#93c5fd">System Overview</div>
+      <div class="flow-desc">
+        All-Java backend. Browser talks to the <strong>Spring Cloud Gateway</strong> which proxies to 3 independent Spring Boot microservices. Each service owns its own PostgreSQL database — no shared tables, no cross-DB joins. Redis is the shared bus for caching and WebSocket fan-out.
+      </div>
+      <div class="steps">
+        <div class="step active" style="--flow-color:#3b82f6">
+          <span class="step-num">①</span>
+          <span class="step-text"><strong>Spring Cloud Gateway (:3000)</strong> — single entry point. Validates JWT, routes requests, enforces rate limits. Also handles WebSocket upgrade.</span>
+        </div>
+        <div class="step active" style="--flow-color:#10b981">
+          <span class="step-num">②</span>
+          <span class="step-text"><strong>Auth Service (:8081)</strong> — RSA key pair holder. Signs JWTs (private key). All other services only verify (public key).</span>
+        </div>
+        <div class="step active" style="--flow-color:#f59e0b">
+          <span class="step-num">③</span>
+          <span class="step-text"><strong>Portfolio Service (:8082)</strong> — Holdings CRUD, alerts. Reads Redis for live prices instead of calling Market service directly.</span>
+        </div>
+        <div class="step active" style="--flow-color:#ef4444">
+          <span class="step-num">④</span>
+          <span class="step-text"><strong>Market Data Service (:8083)</strong> — Scrapes Yahoo Finance every 60s via Jsoup. Circuit breaker (Resilience4j) protects against failures.</span>
+        </div>
+        <div class="step active" style="--flow-color:#dc2626">
+          <span class="step-num">⑤</span>
+          <span class="step-text"><strong>Redis</strong> — Cache (TTL 90s per ticker), Pub/Sub channel <code>prices:live</code>, rate limiting counters. Shared across all pods.</span>
+        </div>
+      </div>
+      <div class="click-hint">Click any service box for internal details</div>
+    </div>
+
+    <!-- LOGIN FLOW -->
+    <div class="flow-info" id="info-login">
+      <div class="flow-title" style="color:#10b981">Login Flow</div>
+      <div class="flow-desc">User sends credentials → only auth-service ever touches the private key → short-lived JWT returned in body + refresh token in httpOnly cookie.</div>
+      <div class="steps" id="steps-login">
+        <div class="step" style="--flow-color:#10b981"><span class="step-num">1</span><span class="step-text">Browser: <code>POST /v1/auth/login {email, password}</code></span></div>
+        <div class="step" style="--flow-color:#10b981"><span class="step-num">2</span><span class="step-text">Gateway: public route — no JWT check needed. Proxies straight through.</span></div>
+        <div class="step" style="--flow-color:#10b981"><span class="step-num">3</span><span class="step-text">Auth Service: loads user from <code>auth_db</code>. Verifies BCrypt hash (cost=12).</span></div>
+        <div class="step" style="--flow-color:#10b981"><span class="step-num">4</span><span class="step-text">Auth Service: signs JWT using <strong>RSA private key</strong> (only this service has it). Saves refresh token hash to DB.</span></div>
+        <div class="step" style="--flow-color:#10b981"><span class="step-num">5</span><span class="step-text">Response: <code>accessToken</code> (15 min) in JSON body + <code>refreshToken</code> in <strong>httpOnly cookie</strong>.</span></div>
+        <div class="step" style="--flow-color:#10b981"><span class="step-num">6</span><span class="step-text">Browser stores <code>accessToken</code> in <strong>JS memory only</strong> — never localStorage (XSS protection).</span></div>
+      </div>
+    </div>
+
+    <!-- ADD HOLDING FLOW -->
+    <div class="flow-info" id="info-holding">
+      <div class="flow-title" style="color:#f59e0b">Add Holding Flow</div>
+      <div class="flow-desc">User adds a stock to their portfolio. Gateway validates JWT locally (no network call) then Portfolio service reads cached price from Redis to compute monthly income.</div>
+      <div class="steps" id="steps-holding">
+        <div class="step" style="--flow-color:#f59e0b"><span class="step-num">1</span><span class="step-text">Browser: <code>POST /v1/portfolio/holdings {ticker: "STRC", amount: 150000}</code> with JWT header.</span></div>
+        <div class="step" style="--flow-color:#f59e0b"><span class="step-num">2</span><span class="step-text">Gateway: verifies RS256 JWT using <strong>public key only</strong> — no auth-service call needed.</span></div>
+        <div class="step" style="--flow-color:#f59e0b"><span class="step-num">3</span><span class="step-text">Portfolio Service: saves holding to <code>portfolio_db</code>. Note: <code>user_id</code> is stored as plain VARCHAR — no FK to auth DB.</span></div>
+        <div class="step" style="--flow-color:#f59e0b"><span class="step-num">4</span><span class="step-text">Portfolio Service: reads <code>stock:price:STRC</code> from <strong>Redis cache</strong> (TTL=90s). No HTTP call to market service.</span></div>
+        <div class="step" style="--flow-color:#f59e0b"><span class="step-num">5</span><span class="step-text">Computes: <code>monthly = amount × yield / 12</code>. Returns <code>{holdingId, ticker, monthlyIncome: 1437.50}</code>.</span></div>
+      </div>
+    </div>
+
+    <!-- LIVE PRICES FLOW -->
+    <div class="flow-info" id="info-prices">
+      <div class="flow-title" style="color:#ef4444">Live Prices (WebSocket)</div>
+      <div class="flow-desc">Background job scrapes Yahoo Finance every 60s, caches in Redis, publishes to Pub/Sub channel. Gateway fans out to all connected WebSocket clients.</div>
+      <div class="steps" id="steps-prices">
+        <div class="step" style="--flow-color:#ef4444"><span class="step-num">1</span><span class="step-text"><code>@Scheduled</code> <code>PriceUpdateJob</code> fires every 60s in Market Data Service.</span></div>
+        <div class="step" style="--flow-color:#ef4444"><span class="step-num">2</span><span class="step-text"><code>YahooFinanceScraper.scrape("STRC")</code> — Jsoup fetches HTML from <code>finance.yahoo.com/quote/STRC</code>.</span></div>
+        <div class="step" style="--flow-color:#ef4444"><span class="step-num">3</span><span class="step-text">Resilience4j CircuitBreaker wraps call — opens after 3 failures, retries after 30s.</span></div>
+        <div class="step" style="--flow-color:#ef4444"><span class="step-num">4</span><span class="step-text"><code>PricePublisher</code> writes to Redis: <code>stock:price:STRC → {yield, price}</code> (TTL=90s) then publishes to channel <code>prices:live</code>.</span></div>
+        <div class="step" style="--flow-color:#ef4444"><span class="step-num">5</span><span class="step-text">Gateway is subscribed to <code>prices:live</code> via <code>ReactiveRedisMessageListenerContainer</code>.</span></div>
+        <div class="step" style="--flow-color:#ef4444"><span class="step-num">6</span><span class="step-text">Gateway fans out <code>{type:"PRICE_UPDATE", ticker:"STRC", yield:11.5, price:99.8}</code> to all WS clients watching STRC.</span></div>
+        <div class="step" style="--flow-color:#ef4444"><span class="step-num">7</span><span class="step-text"><code>LivePriceBadge.tsx</code> re-renders with new yield. No page refresh needed.</span></div>
+      </div>
+    </div>
+
+    <!-- Legend -->
+    <div class="legend">
+      <h2>Legend</h2>
+      <div class="legend-items">
+        <div class="legend-item"><div class="legend-dot" style="background:#3b82f6"></div> Frontend/Browser</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#8b5cf6"></div> Spring Cloud Gateway</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#10b981"></div> Auth Service</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#f59e0b"></div> Portfolio Service</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#ef4444"></div> Market Data Service</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#6366f1"></div> PostgreSQL (×3)</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#dc2626"></div> Redis</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#ca8a04"></div> Yahoo Finance (ext)</div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<!-- Service detail drawer -->
+<div id="drawer">
+  <button id="drawer-close">✕</button>
+  <h3 id="drawer-title"></h3>
+  <div class="drawer-grid" id="drawer-body"></div>
+</div>
+
+<script>
+// ── Service detail data ──────────────────────────────────────────
+const serviceDetails = {
+  browser: {
+    title: 'Browser / Frontend — Next.js 14',
+    color: '#3b82f6',
+    items: [
+      { label: 'Framework',      val: 'Next.js 14 (App Router)' },
+      { label: 'Language',       val: 'TypeScript 5.x' },
+      { label: 'Calculator page',val: 'SSG (static) — public, SEO' },
+      { label: 'Dashboard page', val: 'CSR (client) — auth required' },
+      { label: 'Token storage',  val: 'JS memory only (NOT localStorage)' },
+      { label: 'WebSocket hook', val: 'useWebSocket.ts — auto-reconnect' },
+      { label: 'HTTP client',    val: 'Axios with JWT interceptor' },
+      { label: 'Port',           val: '3001' },
+    ]
+  },
+  gateway: {
+    title: 'API Gateway — Spring Cloud Gateway',
+    color: '#8b5cf6',
+    items: [
+      { label: 'Framework',      val: 'Spring Cloud Gateway 2023.0.x' },
+      { label: 'Execution model',val: 'Reactive (WebFlux — non-blocking)' },
+      { label: 'JWT validation', val: 'RS256 — public key only (no auth-service call)' },
+      { label: 'Rate limiting',  val: 'Redis-backed — 100 req/min public, 1000 authed' },
+      { label: 'WebSocket',      val: 'Proxies + fans out via ReactiveRedis Pub/Sub' },
+      { label: 'CORS',           val: 'Configured in application.yml' },
+      { label: 'Port',           val: '3000 (external entry point)' },
+    ]
+  },
+  auth: {
+    title: 'Auth Service — Spring Boot 3',
+    color: '#10b981',
+    items: [
+      { label: 'JWT algorithm',   val: 'RS256 (asymmetric) — only service with private key' },
+      { label: 'Password hashing',val: 'BCrypt cost=12 (intentionally slow)' },
+      { label: 'ID format',       val: 'ULID (26 chars, sortable, URL-safe)' },
+      { label: 'Refresh tokens',  val: 'SHA-256 hash stored, raw token in httpOnly cookie' },
+      { label: 'DB migrations',   val: 'Flyway V1__init_auth.sql' },
+      { label: 'Key endpoints',   val: 'POST /auth/login, /register, /refresh, GET /me' },
+      { label: 'Port',            val: '8081 (internal only)' },
+    ]
+  },
+  portfolio: {
+    title: 'Portfolio Service — Spring Boot 3',
+    color: '#f59e0b',
+    items: [
+      { label: 'JWT validation',  val: 'RS256 public key — no auth-service dependency' },
+      { label: 'User ID',         val: 'VARCHAR (not FK) — no cross-DB join' },
+      { label: 'Price lookup',    val: 'Reads Redis stock:price:{ticker} — no HTTP call' },
+      { label: 'HTTP client',     val: 'WebClient (reactive) for any service calls' },
+      { label: 'DB migrations',   val: 'Flyway V1__init_portfolio.sql' },
+      { label: 'Key tables',      val: 'holdings (UNIQUE user+ticker), alerts' },
+      { label: 'Port',            val: '8082 (internal only)' },
+    ]
+  },
+  market: {
+    title: 'Market Data Service — Spring Boot 3',
+    color: '#ef4444',
+    items: [
+      { label: 'Scraper',         val: 'YahooFinanceScraper implements MarketDataProvider' },
+      { label: 'HTML parser',     val: 'Jsoup 1.17.x' },
+      { label: 'Circuit breaker', val: 'Resilience4j — opens after 3 failures, 30s wait' },
+      { label: 'Schedule',        val: '@Scheduled every 60s (PriceUpdateJob)' },
+      { label: 'Redis cache',     val: 'stock:price:{ticker} — TTL=90s' },
+      { label: 'Redis Pub/Sub',   val: 'Publishes to prices:live channel after each scrape' },
+      { label: 'Port',            val: '8083 (internal only)' },
+    ]
+  },
+  authdb: {
+    title: 'Auth DB — PostgreSQL 16',
+    color: '#6366f1',
+    items: [
+      { label: 'Tables',         val: 'users, refresh_tokens' },
+      { label: 'User PK',        val: 'ULID VARCHAR(26)' },
+      { label: 'Password',       val: 'BCrypt hash VARCHAR(60)' },
+      { label: 'Token storage',  val: 'SHA-256(token) stored — raw token never persisted' },
+      { label: 'Indexes',        val: 'idx_users_email, idx_rt_user_id, idx_rt_expires' },
+      { label: 'Port (local)',    val: '5433:5432' },
+    ]
+  },
+  portfoliodb: {
+    title: 'Portfolio DB — PostgreSQL 16',
+    color: '#6366f1',
+    items: [
+      { label: 'Tables',        val: 'holdings, alerts' },
+      { label: 'user_id',       val: 'VARCHAR — NOT a FK to auth_db (different DB!)' },
+      { label: 'Holding PK',    val: 'ULID. Unique constraint: (user_id, ticker)' },
+      { label: 'Alert types',   val: 'yield_change | price_drop | dividend' },
+      { label: 'Port (local)',   val: '5434:5432' },
+    ]
+  },
+  marketdb: {
+    title: 'Market DB — PostgreSQL 16',
+    color: '#6366f1',
+    items: [
+      { label: 'Tables',        val: 'stocks, price_history' },
+      { label: 'Stocks PK',     val: 'ticker VARCHAR(10) — natural key' },
+      { label: 'price_history', val: 'BIGSERIAL — time-series, indexed (ticker, recorded_at DESC)' },
+      { label: 'Seed data',     val: 'V2__seed_stocks.sql — 9 tickers (STRC, ARCC, JEPI...)' },
+      { label: 'Port (local)',   val: '5435:5432' },
+    ]
+  },
+  redis: {
+    title: 'Redis 7 — Cache + Pub/Sub + Rate Limiting',
+    color: '#dc2626',
+    items: [
+      { label: 'Price cache',   val: 'stock:price:{ticker} → {yield, price} — TTL=90s' },
+      { label: 'All stocks',    val: 'stock:all:list → JSON array — TTL=120s' },
+      { label: 'Rate limiting', val: 'ratelimit:{ip}:{route} → counter — TTL=60s' },
+      { label: 'Pub/Sub ch 1',  val: 'prices:live — Market publishes, Gateway subscribes' },
+      { label: 'Pub/Sub ch 2',  val: 'alerts:trigger — triggers alert worker' },
+      { label: 'Pub/Sub ch 3',  val: 'portfolio:refresh — notifies user WS after DB changes' },
+      { label: 'Port',          val: '6379' },
+    ]
+  }
+};
+
+// ── Tab switching ────────────────────────────────────────────────
+const tabs    = document.querySelectorAll('.tab');
+const infoDivs= document.querySelectorAll('.flow-info');
+const flowLines = {
+  login:   document.getElementById('flow-login-lines'),
+  holding: document.getElementById('flow-holding-lines'),
+  prices:  document.getElementById('flow-prices-lines'),
+};
+let currentFlow = 'overview';
+let animHandle  = null;
+
+tabs.forEach(tab => {
+  tab.addEventListener('click', () => {
+    tabs.forEach(t => t.classList.remove('active'));
+    tab.classList.add('active');
+    infoDivs.forEach(d => d.classList.remove('active'));
+    document.getElementById('info-' + tab.dataset.flow).classList.add('active');
+
+    // Hide all flow lines
+    Object.values(flowLines).forEach(l => { if (l) l.setAttribute('opacity', '0'); });
+
+    // Stop previous animation
+    if (animHandle) { cancelAnimationFrame(animHandle); animHandle = null; }
+    stopParticles();
+
+    currentFlow = tab.dataset.flow;
+
+    if (currentFlow !== 'overview') {
+      const fl = flowLines[currentFlow];
+      if (fl) fl.setAttribute('opacity', '1');
+      startFlow(currentFlow);
+    }
+  });
+});
+
+// ── Particle animation system ────────────────────────────────────
+const FLOWS = {
+  login: {
+    particleIds: ['p-login'],
+    paths: [
+      // browser→gateway→auth→authdb
+      [{x:20, y:240}, {x:145, y:240}, {x:225, y:240}, {x:290, y:240}, {x:290, y:100}, {x:410, y:100}, {x:475, y:100}, {x:540, y:100}, {x:625, y:100}, {x:685, y:100}],
+    ],
+    stepCount: 6,
+    stagger: 0,
+  },
+  holding: {
+    particleIds: ['p-holding'],
+    paths: [
+      // browser→gateway→portfolio→portfoliodb + redis
+      [{x:20, y:240}, {x:145, y:240}, {x:225, y:240}, {x:290, y:240}, {x:410, y:240}, {x:475, y:240}, {x:540, y:240}, {x:660, y:240}, {x:660, y:240}],
+    ],
+    stepCount: 5,
+    stagger: 0,
+  },
+  prices: {
+    particleIds: ['p-prices-a', 'p-prices-b'],
+    paths: [
+      // yahoo→market data→redis
+      [{x:475, y:475}, {x:475, y:445}, {x:475, y:410}, {x:475, y:380}, {x:540, y:390}, {x:625, y:415}, {x:660, y:415}],
+      // redis→gateway→browser (pub/sub)
+      [{x:660, y:430}, {x:500, y:490}, {x:340, y:490}, {x:290, y:290}, {x:290, y:240}, {x:145, y:240}, {x:20, y:240}],
+    ],
+    stepCount: 7,
+    stagger: 100,
+  }
+};
+
+let particles = [];
+
+function lerp(a, b, t) { return a + (b - a) * t; }
+
+class Particle {
+  constructor(id, waypoints, delay, totalDuration) {
+    this.el = document.getElementById(id);
+    this.waypoints = waypoints;
+    this.delay = delay;          // ms before starting
+    this.duration = totalDuration; // ms for full trip
+    this.startTime = null;
+    this.done = false;
+  }
+
+  update(now) {
+    if (!this.startTime) this.startTime = now;
+    const elapsed = now - this.startTime - this.delay;
+    if (elapsed < 0) { this.el.setAttribute('opacity', '0'); return; }
+
+    const t = Math.min(elapsed / this.duration, 1);
+    const pts = this.waypoints;
+    const idx = Math.floor(t * (pts.length - 1));
+    const localT = (t * (pts.length - 1)) - idx;
+    const a = pts[Math.min(idx, pts.length - 1)];
+    const b = pts[Math.min(idx + 1, pts.length - 1)];
+
+    const x = lerp(a.x, b.x, localT);
+    const y = lerp(a.y, b.y, localT);
+    this.el.setAttribute('cx', x.toFixed(1));
+    this.el.setAttribute('cy', y.toFixed(1));
+    this.el.setAttribute('opacity', t >= 1 ? '0' : '1');
+    if (t >= 1) this.done = true;
+  }
+}
+
+// Step highlighting: advance steps based on animation progress
+function updateSteps(flow, progress) {
+  const steps = document.querySelectorAll(`#steps-${flow} .step`);
+  const total  = steps.length;
+  const active = Math.floor(progress * total);
+  steps.forEach((s, i) => {
+    s.classList.remove('active', 'done');
+    if (i < active) s.classList.add('done');
+    else if (i === active) s.classList.add('active');
+  });
+}
+
+function stopParticles() {
+  particles.forEach(p => { if (p.el) p.el.setAttribute('opacity', '0'); });
+  particles = [];
+  // Reset all steps
+  document.querySelectorAll('.step').forEach(s => s.classList.remove('active', 'done'));
+}
+
+function startFlow(flowName) {
+  stopParticles();
+  const flow = FLOWS[flowName];
+  if (!flow) return;
+
+  const DURATION = flowName === 'prices' ? 3200 : 2800;
+  flow.paths.forEach((path, i) => {
+    const id = flow.particleIds[i];
+    if (id) {
+      particles.push(new Particle(id, path, flow.stagger * i, DURATION));
+    }
+  });
+
+  let loopStart = null;
+  const LOOP_DELAY = 600; // pause between loops
+
+  function tick(now) {
+    if (!loopStart) loopStart = now;
+    const cycleTime = now - loopStart;
+    const cycleDuration = DURATION + LOOP_DELAY;
+
+    // Progress for step highlighting (use first particle)
+    const elapsed = cycleTime - (particles[0]?.delay || 0);
+    const progress = Math.max(0, Math.min(1, elapsed / DURATION));
+    updateSteps(flowName, progress);
+
+    particles.forEach(p => p.update(now));
+
+    // All done — restart loop
+    if (particles.every(p => p.done)) {
+      loopStart = null;
+      particles = [];
+      flow.paths.forEach((path, i) => {
+        const id = flow.particleIds[i];
+        if (id) particles.push(new Particle(id, path, flow.stagger * i, DURATION));
+      });
+    }
+
+    animHandle = requestAnimationFrame(tick);
+  }
+
+  animHandle = requestAnimationFrame(tick);
+}
+
+// ── Service box click → drawer ───────────────────────────────────
+const drawer      = document.getElementById('drawer');
+const drawerTitle = document.getElementById('drawer-title');
+const drawerBody  = document.getElementById('drawer-body');
+const drawerClose = document.getElementById('drawer-close');
+
+document.querySelectorAll('.service-box').forEach(box => {
+  box.addEventListener('click', () => {
+    const id   = box.dataset.id;
+    const data = serviceDetails[id];
+    if (!data) return;
+
+    drawerTitle.textContent = data.title;
+    drawerTitle.style.color = data.color;
+    drawerBody.innerHTML = data.items.map(item =>
+      `<div class="drawer-item">
+        <div class="di-label">${item.label}</div>
+        <div class="di-val">${item.val}</div>
+      </div>`
+    ).join('');
+    drawer.classList.add('open');
+  });
+});
+
+drawerClose.addEventListener('click', () => drawer.classList.remove('open'));
+document.addEventListener('keydown', e => { if (e.key === 'Escape') drawer.classList.remove('open'); });
+</script>
+</body>
+</html>

@@ -1,0 +1,68 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-earth-50 text-earth-900 font-body antialiased;
+  }
+  h1, h2, h3, h4 {
+    @apply font-display;
+  }
+  ::selection {
+    @apply bg-forest-200/60 text-forest-900;
+  }
+}
+
+@layer components {
+  .btn-primary {
+    @apply bg-forest-600 text-white font-semibold py-2.5 px-5 rounded-xl transition-all duration-200 hover:bg-forest-700 active:bg-forest-800 active:scale-[0.97] shadow-sm hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+  .btn-secondary {
+    @apply bg-white text-earth-800 font-medium py-2.5 px-5 rounded-xl border border-earth-200 transition-all duration-200 hover:bg-earth-100 active:bg-earth-200 active:scale-[0.97] shadow-sm hover:shadow-md;
+  }
+  .btn-ghost {
+    @apply text-earth-600 font-medium py-2 px-3 rounded-xl transition-all duration-200 hover:text-earth-800 hover:bg-earth-100;
+  }
+  .card {
+    @apply bg-white rounded-2xl border border-earth-100 p-6 shadow-sm transition-shadow duration-300 hover:shadow-md;
+  }
+  .card-hover {
+    @apply bg-white rounded-2xl border border-earth-100 p-6 shadow-sm transition-all duration-300 hover:shadow-lg hover:border-forest-200;
+  }
+  .input-field {
+    @apply w-full rounded-xl border border-earth-200 bg-white px-4 py-2.5 text-earth-900 placeholder-earth-400 outline-none transition-all duration-200 focus:border-forest-400 focus:ring-2 focus:ring-forest-100/50;
+  }
+  .input-sm {
+    @apply rounded-lg border border-earth-200 bg-white px-3 py-2 text-sm text-earth-900 placeholder-earth-400 outline-none transition-all focus:border-forest-400 focus:ring-2 focus:ring-forest-100/50;
+  }
+  .badge {
+    @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium;
+  }
+  .badge-forest {
+    @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-forest-100 text-forest-800;
+  }
+  .badge-leaf {
+    @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-leaf-100 text-leaf-800;
+  }
+  .badge-earth {
+    @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-earth-100 text-earth-800;
+  }
+  .badge-red {
+    @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-700;
+  }
+}
+
+@layer utilities {
+  .text-gradient {
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-forest-600 to-leaf-500;
+  }
+}
+
+@keyframes slide-up {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.animate-slide-up {
+  animation: slide-up 0.3s ease-out;
+}

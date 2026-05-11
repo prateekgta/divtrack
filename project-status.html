@@ -1,0 +1,1112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DivTrack — Project Status & Flow</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    background: #0d1117;
+    color: #e6edf3;
+    min-height: 100vh;
+  }
+
+  /* ── Header ── */
+  .header {
+    background: linear-gradient(135deg, #161b22 0%, #1c2128 100%);
+    border-bottom: 1px solid #30363d;
+    padding: 20px 32px;
+    display: flex; align-items: center; gap: 16px;
+  }
+  .header h1 { font-size: 22px; font-weight: 700; color: #58a6ff; }
+  .header p  { font-size: 13px; color: #8b949e; margin-top: 3px; }
+  .logo { font-size: 32px; }
+
+  /* ── Tabs ── */
+  .tabs {
+    display: flex; gap: 4px;
+    background: #161b22;
+    border-bottom: 1px solid #30363d;
+    padding: 0 32px;
+  }
+  .tab {
+    padding: 12px 18px; font-size: 13px; cursor: pointer;
+    border-bottom: 2px solid transparent;
+    color: #8b949e; transition: all 0.2s;
+    white-space: nowrap;
+  }
+  .tab:hover { color: #e6edf3; }
+  .tab.active { color: #58a6ff; border-bottom-color: #58a6ff; }
+
+  /* ── Tab content ── */
+  .tab-content { display: none; padding: 32px; }
+  .tab-content.active { display: block; }
+
+  /* ── Cards ── */
+  .card {
+    background: #161b22;
+    border: 1px solid #30363d;
+    border-radius: 12px;
+    padding: 24px;
+    margin-bottom: 20px;
+  }
+  .card h2 { font-size: 16px; font-weight: 600; margin-bottom: 16px; color: #e6edf3; }
+  .card h3 { font-size: 14px; font-weight: 600; margin-bottom: 10px; color: #8b949e; }
+
+  /* ── Status badges ── */
+  .badge {
+    display: inline-flex; align-items: center; gap: 5px;
+    padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 600;
+  }
+  .badge.done   { background: #1a3a2a; color: #3fb950; border: 1px solid #238636; }
+  .badge.partial{ background: #2d2a1a; color: #d29922; border: 1px solid #9e6a03; }
+  .badge.todo   { background: #2a1a1a; color: #f85149; border: 1px solid #b91c1c; }
+  .badge.infra  { background: #1a2a3a; color: #58a6ff; border: 1px solid #1d4ed8; }
+
+  /* ── Service boxes ── */
+  .services-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+  .service-box {
+    background: #0d1117;
+    border: 1px solid #30363d;
+    border-radius: 10px;
+    padding: 16px;
+    position: relative;
+  }
+  .service-box .svc-header {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 12px;
+  }
+  .svc-name { font-size: 14px; font-weight: 600; }
+  .svc-port { font-size: 11px; color: #8b949e; font-family: monospace; }
+  .file-list { list-style: none; }
+  .file-list li {
+    font-size: 12px; padding: 4px 0;
+    display: flex; align-items: center; gap: 8px;
+    border-bottom: 1px solid #21262d;
+    font-family: monospace;
+    color: #8b949e;
+  }
+  .file-list li:last-child { border-bottom: none; }
+  .file-list li .dot {
+    width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0;
+  }
+  .dot-green  { background: #3fb950; }
+  .dot-yellow { background: #d29922; }
+  .dot-red    { background: #f85149; }
+  .dot-blue   { background: #58a6ff; }
+
+  /* ── Flowchart SVG ── */
+  .flow-container { overflow-x: auto; }
+  svg text { font-family: 'Segoe UI', system-ui, sans-serif; }
+
+  /* ── Code block ── */
+  .code-block {
+    background: #0d1117;
+    border: 1px solid #30363d;
+    border-radius: 8px;
+    padding: 16px;
+    font-family: 'Cascadia Code', 'Fira Code', monospace;
+    font-size: 12px;
+    line-height: 1.6;
+    overflow-x: auto;
+    white-space: pre;
+    color: #e6edf3;
+    margin-bottom: 16px;
+  }
+  .kw  { color: #ff7b72; }
+  .str { color: #a5d6ff; }
+  .cmt { color: #8b949e; font-style: italic; }
+  .ann { color: #d2a8ff; }
+  .typ { color: #79c0ff; }
+  .met { color: #d2a8ff; }
+
+  /* ── Two-col layout ── */
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+  @media (max-width: 900px) { .two-col { grid-template-columns: 1fr; } }
+
+  /* ── Flow arrows (text-based) ── */
+  .flow-box {
+    background: #161b22;
+    border: 1px solid #30363d;
+    border-radius: 8px;
+    padding: 10px 14px;
+    margin: 8px 0;
+    font-size: 13px;
+  }
+  .flow-arrow { text-align: center; color: #8b949e; font-size: 18px; margin: 2px 0; }
+  .flow-box.green  { border-color: #238636; background: #0d2318; }
+  .flow-box.blue   { border-color: #1d4ed8; background: #0d1a30; }
+  .flow-box.purple { border-color: #7c3aed; background: #1a0d2e; }
+  .flow-box.yellow { border-color: #9e6a03; background: #2a1e0d; }
+  .flow-box.red    { border-color: #b91c1c; background: #2a0d0d; }
+  .flow-box .label { font-size: 11px; color: #8b949e; margin-top: 3px; }
+  .flow-box .name  { font-weight: 600; }
+
+  /* ── Progress bar ── */
+  .progress-bar {
+    height: 8px;
+    background: #21262d;
+    border-radius: 4px;
+    overflow: hidden;
+    margin: 6px 0;
+  }
+  .progress-fill {
+    height: 100%;
+    border-radius: 4px;
+    transition: width 0.5s ease;
+  }
+  .fill-green  { background: linear-gradient(90deg, #238636, #3fb950); }
+  .fill-yellow { background: linear-gradient(90deg, #9e6a03, #d29922); }
+  .fill-red    { background: linear-gradient(90deg, #b91c1c, #f85149); }
+
+  /* ── Legend ── */
+  .legend { display: flex; gap: 20px; flex-wrap: wrap; margin-bottom: 20px; font-size: 12px; }
+  .legend-item { display: flex; align-items: center; gap: 6px; }
+
+  /* ── Inline tag ── */
+  .tag {
+    display: inline-block; padding: 2px 8px; border-radius: 4px;
+    font-size: 11px; font-family: monospace;
+    background: #21262d; color: #8b949e;
+  }
+  .tag.green  { background: #1a3a2a; color: #3fb950; }
+  .tag.blue   { background: #1a2a3a; color: #58a6ff; }
+  .tag.yellow { background: #2d2a1a; color: #d29922; }
+
+  /* ── Section divider ── */
+  .divider { border: none; border-top: 1px solid #30363d; margin: 24px 0; }
+
+  /* ── Architecture row ── */
+  .arch-row {
+    display: flex; align-items: stretch; gap: 12px;
+    margin: 8px 0; flex-wrap: wrap;
+  }
+  .arch-node {
+    flex: 1; min-width: 120px; max-width: 200px;
+    background: #0d1117; border: 1px solid #30363d;
+    border-radius: 8px; padding: 12px; text-align: center;
+    font-size: 12px;
+  }
+  .arch-node .icon { font-size: 22px; margin-bottom: 6px; }
+  .arch-node .nm   { font-weight: 600; font-size: 12px; }
+  .arch-node .pt   { font-size: 10px; color: #8b949e; font-family: monospace; }
+  .arch-node.active-node { border-color: #58a6ff; background: #0d1a30; }
+  .arch-arrow {
+    display: flex; align-items: center;
+    color: #8b949e; font-size: 20px; flex-shrink: 0;
+  }
+</style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════════
+     HEADER
+══════════════════════════════════════════════ -->
+<div class="header">
+  <div class="logo">📊</div>
+  <div>
+    <h1>DivTrack — Project Status Map</h1>
+    <p>What exists · What does what · How data flows · What's left to build</p>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     TABS
+══════════════════════════════════════════════ -->
+<div class="tabs">
+  <div class="tab active"  data-tab="overview">🗺 Overview</div>
+  <div class="tab"         data-tab="monolith">🏛 Monolith (old)</div>
+  <div class="tab"         data-tab="microservices">🔧 Microservices (new)</div>
+  <div class="tab"         data-tab="authflow">🔐 Auth Flow</div>
+  <div class="tab"         data-tab="priceflow">📡 Live Price Flow</div>
+  <div class="tab"         data-tab="whats-next">🚧 What's Next</div>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     TAB 1: OVERVIEW
+══════════════════════════════════════════════ -->
+<div class="tab-content active" id="tab-overview">
+
+  <div class="card">
+    <h2>🏗 Two Architectures in One Repo</h2>
+    <p style="color:#8b949e; font-size:13px; margin-bottom:20px;">
+      The repo has TWO versions of the app. The monolith was your starting point — a complete working single-server app.
+      We're now migrating to a microservices architecture that can scale independently and be hosted cheaply.
+    </p>
+    <div class="two-col">
+      <div>
+        <div class="flow-box green">
+          <div class="name">🏛 Monolith  <span class="badge done">✅ COMPLETE</span></div>
+          <div class="label">src/ — One Spring Boot app, all features inside</div>
+        </div>
+        <ul class="file-list" style="margin: 10px 0 0 20px;">
+          <li><span class="dot dot-green"></span>identity/ — auth, JWT, security</li>
+          <li><span class="dot dot-green"></span>portfolio/ — holdings, alerts</li>
+          <li><span class="dot dot-green"></span>market/ — stocks, Yahoo scraper</li>
+          <li><span class="dot dot-green"></span>dividend/ — paycheck, snowball, tax</li>
+          <li><span class="dot dot-green"></span>frontend/ — Next.js app</li>
+          <li><span class="dot dot-green"></span>DB migrations — V1 + V2 seeded</li>
+        </ul>
+      </div>
+      <div>
+        <div class="flow-box blue">
+          <div class="name">🔧 Microservices  <span class="badge partial">🔄 IN PROGRESS</span></div>
+          <div class="label">services/ + gateway/ — Each concern is a separate service</div>
+        </div>
+        <ul class="file-list" style="margin: 10px 0 0 20px;">
+          <li><span class="dot dot-green"></span>Gateway — WebSocket + proxy ✅</li>
+          <li><span class="dot dot-yellow"></span>Auth-service — 90% done (missing controller)</li>
+          <li><span class="dot dot-red"></span>Portfolio-service — skeleton only</li>
+          <li><span class="dot dot-red"></span>Market-data-service — skeleton only</li>
+          <li><span class="dot dot-green"></span>Docker Compose — full infra ✅</li>
+          <li><span class="dot dot-green"></span>DB schemas — 3 schemas in 1 DB ✅</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- Architecture block diagram -->
+  <div class="card">
+    <h2>🌐 System Architecture at a Glance</h2>
+    <p style="font-size:12px; color:#8b949e; margin-bottom:20px;">
+      Left = browser. Right = where data lives. Center = services that transform data.
+    </p>
+
+    <!-- Row 1: Browser -->
+    <div style="text-align:center; margin-bottom: 8px;">
+      <div class="arch-node" style="display:inline-block; border-color:#58a6ff;">
+        <div class="icon">🌐</div>
+        <div class="nm">Browser</div>
+        <div class="pt">Next.js / port 3000</div>
+      </div>
+    </div>
+    <div class="flow-arrow">↕ HTTPS + WebSocket</div>
+
+    <!-- Row 2: Gateway -->
+    <div style="text-align:center; margin-bottom: 8px;">
+      <div class="arch-node" style="display:inline-block; border-color:#d29922;">
+        <div class="icon">🚪</div>
+        <div class="nm">Gateway</div>
+        <div class="pt">:3000 / Spring Cloud Gateway</div>
+      </div>
+    </div>
+    <div class="flow-arrow">↕ Routes + Fan-out</div>
+
+    <!-- Row 3: Services -->
+    <div class="arch-row" style="justify-content: center;">
+      <div class="arch-node" style="border-color:#3fb950;">
+        <div class="icon">🔐</div>
+        <div class="nm">Auth</div>
+        <div class="pt">:8081</div>
+      </div>
+      <div class="arch-arrow">·</div>
+      <div class="arch-node" style="border-color:#58a6ff;">
+        <div class="icon">💼</div>
+        <div class="nm">Portfolio</div>
+        <div class="pt">:8082</div>
+      </div>
+      <div class="arch-arrow">·</div>
+      <div class="arch-node" style="border-color:#d2a8ff;">
+        <div class="icon">📈</div>
+        <div class="nm">Market Data</div>
+        <div class="pt">:8083</div>
+      </div>
+    </div>
+    <div class="flow-arrow">↕ Reads/Writes · ↕ Pub/Sub</div>
+
+    <!-- Row 4: Data layer -->
+    <div class="arch-row" style="justify-content: center;">
+      <div class="arch-node" style="border-color:#3fb950;">
+        <div class="icon">🐘</div>
+        <div class="nm">PostgreSQL</div>
+        <div class="pt">:5432 · 3 schemas</div>
+      </div>
+      <div class="arch-arrow" style="font-size:14px;">  +  </div>
+      <div class="arch-node" style="border-color:#f85149;">
+        <div class="icon">⚡</div>
+        <div class="nm">Redis</div>
+        <div class="pt">:6379 · pub/sub</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Quick Stats -->
+  <div class="card">
+    <h2>📊 Build Progress</h2>
+    <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:16px;">
+      <div>
+        <div style="font-size:13px; margin-bottom:6px;">Gateway <span class="badge done">✅ Done</span></div>
+        <div class="progress-bar"><div class="progress-fill fill-green" style="width:100%"></div></div>
+        <div style="font-size:11px; color:#8b949e;">4 Java files · WS fan-out + Redis sub</div>
+      </div>
+      <div>
+        <div style="font-size:13px; margin-bottom:6px;">Auth-Service <span class="badge partial">90%</span></div>
+        <div class="progress-bar"><div class="progress-fill fill-yellow" style="width:90%"></div></div>
+        <div style="font-size:11px; color:#8b949e;">13 files done · missing AuthController</div>
+      </div>
+      <div>
+        <div style="font-size:13px; margin-bottom:6px;">Portfolio-Service <span class="badge todo">10%</span></div>
+        <div class="progress-bar"><div class="progress-fill fill-red" style="width:10%"></div></div>
+        <div style="font-size:11px; color:#8b949e;">Scaffold + SQL only · no business code</div>
+      </div>
+      <div>
+        <div style="font-size:13px; margin-bottom:6px;">Market-Data-Service <span class="badge todo">10%</span></div>
+        <div class="progress-bar"><div class="progress-fill fill-red" style="width:10%"></div></div>
+        <div style="font-size:11px; color:#8b949e;">Scaffold + SQL only · no business code</div>
+      </div>
+      <div>
+        <div style="font-size:13px; margin-bottom:6px;">Frontend <span class="badge done">✅ Exists</span></div>
+        <div class="progress-bar"><div class="progress-fill fill-green" style="width:80%"></div></div>
+        <div style="font-size:11px; color:#8b949e;">Next.js pages + API client + auth context</div>
+      </div>
+      <div>
+        <div style="font-size:13px; margin-bottom:6px;">Docker Compose <span class="badge done">✅ Done</span></div>
+        <div class="progress-bar"><div class="progress-fill fill-green" style="width:100%"></div></div>
+        <div style="font-size:11px; color:#8b949e;">All services · healthchecks · JVM flags</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+
+<!-- ══════════════════════════════════════════════
+     TAB 2: MONOLITH
+══════════════════════════════════════════════ -->
+<div class="tab-content" id="tab-monolith">
+  <div class="card">
+    <h2>🏛 Monolith — Complete, Working, in <span class="tag">src/</span></h2>
+    <p style="color:#8b949e; font-size:13px; margin-bottom:16px;">
+      Everything in one Spring Boot app. DDD layering (domain → application → interfaces → infrastructure).
+      This is the original design. It runs, it works. The microservices version is a rebuild for scale.
+    </p>
+    <div class="badge done" style="margin-bottom: 16px;">✅ Fully coded — can run right now</div>
+  </div>
+
+  <div class="services-grid">
+
+    <!-- Identity domain -->
+    <div class="service-box" style="border-color: #3fb950;">
+      <div class="svc-header">
+        <span class="svc-name">🔐 Identity Domain</span>
+        <span class="badge done">✅ Done</span>
+      </div>
+      <ul class="file-list">
+        <li><span class="dot dot-green"></span>User.java — JPA entity</li>
+        <li><span class="dot dot-green"></span>RefreshToken.java</li>
+        <li><span class="dot dot-green"></span>UserRepository (port)</li>
+        <li><span class="dot dot-green"></span>JpaUserRepository (infra)</li>
+        <li><span class="dot dot-green"></span>AuthController → POST /api/auth/**</li>
+        <li><span class="dot dot-green"></span>IdentityApplicationService</li>
+        <li><span class="dot dot-green"></span>AuthDomainService</li>
+        <li><span class="dot dot-green"></span>JwtProvider (RS256)</li>
+        <li><span class="dot dot-green"></span>JwtAuthFilter</li>
+        <li><span class="dot dot-green"></span>SecurityConfig</li>
+      </ul>
+    </div>
+
+    <!-- Portfolio domain -->
+    <div class="service-box" style="border-color: #58a6ff;">
+      <div class="svc-header">
+        <span class="svc-name">💼 Portfolio Domain</span>
+        <span class="badge done">✅ Done</span>
+      </div>
+      <ul class="file-list">
+        <li><span class="dot dot-green"></span>Holding.java — stocks user owns</li>
+        <li><span class="dot dot-green"></span>Alert.java — yield threshold alerts</li>
+        <li><span class="dot dot-green"></span>AccountType enum (TFSA/RRSP/etc)</li>
+        <li><span class="dot dot-green"></span>HoldingRepository / AlertRepository</li>
+        <li><span class="dot dot-green"></span>PortfolioController</li>
+        <li><span class="dot dot-green"></span>PortfolioApplicationService</li>
+        <li><span class="dot dot-green"></span>PlanLimitExceededException</li>
+      </ul>
+    </div>
+
+    <!-- Market domain -->
+    <div class="service-box" style="border-color: #d2a8ff;">
+      <div class="svc-header">
+        <span class="svc-name">📈 Market Data Domain</span>
+        <span class="badge done">✅ Done</span>
+      </div>
+      <ul class="file-list">
+        <li><span class="dot dot-green"></span>Stock.java — price, yield, type</li>
+        <li><span class="dot dot-green"></span>MarketDataProvider (interface)</li>
+        <li><span class="dot dot-green"></span>YahooFinanceProvider (scraper)</li>
+        <li><span class="dot dot-green"></span>PriceUpdateService (scheduler)</li>
+        <li><span class="dot dot-green"></span>MarketController</li>
+        <li><span class="dot dot-green"></span>StockRepository</li>
+      </ul>
+    </div>
+
+    <!-- Dividend domain -->
+    <div class="service-box" style="border-color: #d29922;">
+      <div class="svc-header">
+        <span class="svc-name">💵 Dividend Domain</span>
+        <span class="badge done">✅ Done</span>
+      </div>
+      <ul class="file-list">
+        <li><span class="dot dot-green"></span>BillMapping — map divs → bills</li>
+        <li><span class="dot dot-green"></span>SnowballProjection</li>
+        <li><span class="dot dot-green"></span>TaxAdvice (TFSA/margin)</li>
+        <li><span class="dot dot-green"></span>DividendMilestone</li>
+        <li><span class="dot dot-green"></span>PaycheckService</li>
+        <li><span class="dot dot-green"></span>SnowballService</li>
+        <li><span class="dot dot-green"></span>TaxOptimizerService</li>
+        <li><span class="dot dot-green"></span>DividendController</li>
+      </ul>
+    </div>
+
+    <!-- Common -->
+    <div class="service-box">
+      <div class="svc-header">
+        <span class="svc-name">🧰 Common / Shared</span>
+        <span class="badge done">✅ Done</span>
+      </div>
+      <ul class="file-list">
+        <li><span class="dot dot-green"></span>BaseEntity.java</li>
+        <li><span class="dot dot-green"></span>Money.java (value object)</li>
+        <li><span class="dot dot-green"></span>Percentage.java</li>
+        <li><span class="dot dot-green"></span>BusinessException</li>
+        <li><span class="dot dot-green"></span>ResourceNotFoundException</li>
+        <li><span class="dot dot-green"></span>GlobalExceptionHandler</li>
+        <li><span class="dot dot-green"></span>TestDataSeeder</li>
+      </ul>
+    </div>
+
+    <!-- DB -->
+    <div class="service-box" style="border-color: #3fb950;">
+      <div class="svc-header">
+        <span class="svc-name">🐘 Database Migrations</span>
+        <span class="badge done">✅ Done</span>
+      </div>
+      <ul class="file-list">
+        <li><span class="dot dot-green"></span>V1__init.sql — all tables</li>
+        <li><span class="dot dot-green"></span>V2__seed_stocks.sql — 9 tickers</li>
+        <li><span class="dot dot-blue"></span>STRC, STRF, STRK, ARCC</li>
+        <li><span class="dot dot-blue"></span>JEPI, JEPQ, MAIN, O, AGNC</li>
+      </ul>
+    </div>
+
+  </div>
+
+  <!-- Monolith flow -->
+  <div class="card">
+    <h2>🔁 Monolith Request Flow</h2>
+    <div style="max-width: 400px;">
+      <div class="flow-box blue"><div class="name">Browser → POST /api/auth/login</div></div>
+      <div class="flow-arrow">↓</div>
+      <div class="flow-box blue"><div class="name">JwtAuthFilter — verify bearer (skip for /auth/**)</div></div>
+      <div class="flow-arrow">↓</div>
+      <div class="flow-box blue"><div class="name">AuthController.login()</div></div>
+      <div class="flow-arrow">↓</div>
+      <div class="flow-box blue"><div class="name">IdentityApplicationService</div></div>
+      <div class="flow-arrow">↓</div>
+      <div class="flow-box blue"><div class="name">AuthDomainService (BCrypt verify)</div></div>
+      <div class="flow-arrow">↓</div>
+      <div class="flow-box blue"><div class="name">JwtProvider.generateAccessToken() — RS256 sign</div></div>
+      <div class="flow-arrow">↓</div>
+      <div class="flow-box green"><div class="name">Return { accessToken, refreshToken, user }</div></div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ══════════════════════════════════════════════
+     TAB 3: MICROSERVICES
+══════════════════════════════════════════════ -->
+<div class="tab-content" id="tab-microservices">
+  <div class="card">
+    <h2>🔧 Microservices — What We've Built So Far</h2>
+    <p style="color:#8b949e; font-size:13px; margin-bottom:16px;">
+      Each service is a separate Spring Boot app, its own port, its own DB schema.
+      They talk to each other via HTTP (WebClient) and the browser via the Gateway.
+    </p>
+  </div>
+
+  <div class="services-grid">
+
+    <!-- Gateway -->
+    <div class="service-box" style="border-color:#d29922;">
+      <div class="svc-header">
+        <span class="svc-name">🚪 Gateway</span>
+        <span class="svc-port">:3000</span>
+        <span class="badge done">✅ Done</span>
+      </div>
+      <ul class="file-list">
+        <li><span class="dot dot-green"></span>GatewayApplication.java</li>
+        <li><span class="dot dot-green"></span>WebSocketConfig.java</li>
+        <li><span class="dot dot-yellow"></span>  → order=-1 (before SCG routes)</li>
+        <li><span class="dot dot-green"></span>PriceFanOutHandler.java</li>
+        <li><span class="dot dot-yellow"></span>  → accept WS + fan-out</li>
+        <li><span class="dot dot-green"></span>SessionRegistry.java</li>
+        <li><span class="dot dot-yellow"></span>  → ConcurrentHashMap&lt;ticker, Set&lt;session&gt;&gt;</li>
+        <li><span class="dot dot-green"></span>RedisSubscriberConfig.java</li>
+        <li><span class="dot dot-yellow"></span>  → subscribe prices:live</li>
+        <li><span class="dot dot-green"></span>application.yml</li>
+      </ul>
+    </div>
+
+    <!-- Auth -->
+    <div class="service-box" style="border-color:#3fb950;">
+      <div class="svc-header">
+        <span class="svc-name">🔐 Auth-Service</span>
+        <span class="svc-port">:8081</span>
+        <span class="badge partial">90% done</span>
+      </div>
+      <ul class="file-list">
+        <li><span class="dot dot-green"></span>model/User.java</li>
+        <li><span class="dot dot-green"></span>model/RefreshToken.java</li>
+        <li><span class="dot dot-green"></span>repository/UserRepository.java</li>
+        <li><span class="dot dot-green"></span>repository/RefreshTokenRepository.java</li>
+        <li><span class="dot dot-green"></span>dto/RegisterRequest, LoginRequest…</li>
+        <li><span class="dot dot-green"></span>security/JwtProvider.java (RS256)</li>
+        <li><span class="dot dot-green"></span>security/SecurityConfig.java</li>
+        <li><span class="dot dot-green"></span>service/AuthService.java</li>
+        <li><span class="dot dot-green"></span>exception/GlobalExceptionHandler.java</li>
+        <li><span class="dot dot-red"></span>controller/AuthController.java ← NEXT TO BUILD</li>
+        <li><span class="dot dot-green"></span>V1__init_auth.sql</li>
+      </ul>
+    </div>
+
+    <!-- Portfolio -->
+    <div class="service-box" style="border-color:#58a6ff;">
+      <div class="svc-header">
+        <span class="svc-name">💼 Portfolio-Service</span>
+        <span class="svc-port">:8082</span>
+        <span class="badge todo">Skeleton only</span>
+      </div>
+      <ul class="file-list">
+        <li><span class="dot dot-green"></span>PortfolioApplication.java</li>
+        <li><span class="dot dot-green"></span>application.yml</li>
+        <li><span class="dot dot-green"></span>V1__init_portfolio.sql</li>
+        <li><span class="dot dot-red"></span>model/Holding.java ← TODO</li>
+        <li><span class="dot dot-red"></span>model/Alert.java ← TODO</li>
+        <li><span class="dot dot-red"></span>service/PortfolioService.java ← TODO</li>
+        <li><span class="dot dot-red"></span>controller/PortfolioController.java ← TODO</li>
+        <li><span class="dot dot-red"></span>security/JwtVerifyFilter.java ← TODO</li>
+      </ul>
+    </div>
+
+    <!-- Market Data -->
+    <div class="service-box" style="border-color:#d2a8ff;">
+      <div class="svc-header">
+        <span class="svc-name">📈 Market-Data-Service</span>
+        <span class="svc-port">:8083</span>
+        <span class="badge todo">Skeleton only</span>
+      </div>
+      <ul class="file-list">
+        <li><span class="dot dot-green"></span>MarketDataApplication.java</li>
+        <li><span class="dot dot-green"></span>application.yml</li>
+        <li><span class="dot dot-green"></span>V1__init_market.sql</li>
+        <li><span class="dot dot-green"></span>V2__seed_stocks.sql (9 tickers)</li>
+        <li><span class="dot dot-red"></span>model/Stock.java ← TODO</li>
+        <li><span class="dot dot-red"></span>provider/MarketDataProvider.java ← TODO</li>
+        <li><span class="dot dot-red"></span>provider/YahooFinanceScraper.java ← TODO</li>
+        <li><span class="dot dot-red"></span>service/PriceFetchScheduler.java ← TODO</li>
+        <li><span class="dot dot-red"></span>Redis publisher → prices:live ← TODO</li>
+      </ul>
+    </div>
+
+    <!-- Frontend -->
+    <div class="service-box" style="border-color:#58a6ff;">
+      <div class="svc-header">
+        <span class="svc-name">🌐 Frontend (Next.js)</span>
+        <span class="svc-port">:3000 (dev)</span>
+        <span class="badge done">✅ Exists</span>
+      </div>
+      <ul class="file-list">
+        <li><span class="dot dot-green"></span>app/page.tsx (landing)</li>
+        <li><span class="dot dot-green"></span>app/login/page.tsx</li>
+        <li><span class="dot dot-green"></span>app/register/page.tsx</li>
+        <li><span class="dot dot-green"></span>app/dashboard/page.tsx</li>
+        <li><span class="dot dot-green"></span>app/dashboard/paycheck/page.tsx</li>
+        <li><span class="dot dot-green"></span>app/dashboard/snowball/page.tsx</li>
+        <li><span class="dot dot-green"></span>app/dashboard/tax/page.tsx</li>
+        <li><span class="dot dot-green"></span>lib/api.ts (HTTP client)</li>
+        <li><span class="dot dot-green"></span>lib/auth-context.tsx</li>
+      </ul>
+    </div>
+
+    <!-- Infra -->
+    <div class="service-box" style="border-color:#3fb950;">
+      <div class="svc-header">
+        <span class="svc-name">🐳 Infrastructure</span>
+        <span class="badge done">✅ Done</span>
+      </div>
+      <ul class="file-list">
+        <li><span class="dot dot-green"></span>docker-compose.yml</li>
+        <li><span class="dot dot-yellow"></span>  → 1 PostgreSQL (3 schemas)</li>
+        <li><span class="dot dot-yellow"></span>  → Redis 7</li>
+        <li><span class="dot dot-yellow"></span>  → healthchecks on all</li>
+        <li><span class="dot dot-yellow"></span>  → JVM memory flags</li>
+        <li><span class="dot dot-green"></span>init-schemas.sql</li>
+        <li><span class="dot dot-yellow"></span>  → auth + portfolio + market</li>
+        <li><span class="dot dot-green"></span>.env.example</li>
+        <li><span class="dot dot-green"></span>pom.xml (parent)</li>
+      </ul>
+    </div>
+
+  </div>
+
+  <!-- DB design -->
+  <div class="card">
+    <h2>🐘 Single DB, 3 Schemas — How It Works</h2>
+    <div class="two-col">
+      <div>
+        <div style="font-size:13px; color:#8b949e; margin-bottom:12px;">
+          One PostgreSQL container, three logical namespaces. Each service only sees its own schema via <span class="tag">currentSchema=</span> in the JDBC URL.
+        </div>
+        <div class="flow-box green">
+          <div class="name">auth.users</div>
+          <div class="label">id, email, password_hash, name, plan</div>
+        </div>
+        <div class="flow-box green" style="margin-top:8px;">
+          <div class="name">auth.refresh_tokens</div>
+          <div class="label">id, user_id, token_hash, is_revoked, expires_at</div>
+        </div>
+      </div>
+      <div>
+        <div class="flow-box blue" style="margin-bottom:8px;">
+          <div class="name">portfolio.holdings</div>
+          <div class="label">id, user_id, ticker, shares, avg_cost</div>
+        </div>
+        <div class="flow-box blue" style="margin-bottom:8px;">
+          <div class="name">portfolio.alerts</div>
+          <div class="label">id, user_id, ticker, threshold_yield</div>
+        </div>
+        <div class="flow-box purple">
+          <div class="name">market.stocks + market.price_history</div>
+          <div class="label">ticker, price, yield, type, fetched_at</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ══════════════════════════════════════════════
+     TAB 4: AUTH FLOW
+══════════════════════════════════════════════ -->
+<div class="tab-content" id="tab-authflow">
+  <div class="two-col">
+
+    <!-- Register flow -->
+    <div class="card">
+      <h2>📝 Register Flow</h2>
+      <div class="flow-box blue">
+        <div class="name">1. Browser → POST /api/auth/register</div>
+        <div class="label">{ email, password, name }</div>
+      </div>
+      <div class="flow-arrow">↓</div>
+      <div class="flow-box yellow">
+        <div class="name">2. Gateway proxies to auth-service :8081</div>
+        <div class="label">Spring Cloud Gateway route: /api/auth/** → auth-service</div>
+      </div>
+      <div class="flow-arrow">↓</div>
+      <div class="flow-box blue">
+        <div class="name">3. AuthController.register()</div>
+        <div class="label">@Valid validates email format + password ≥8 chars</div>
+      </div>
+      <div class="flow-arrow">↓</div>
+      <div class="flow-box blue">
+        <div class="name">4. AuthService checks email uniqueness</div>
+        <div class="label">SELECT EXISTS(... WHERE email=?) → 409 if taken</div>
+      </div>
+      <div class="flow-arrow">↓</div>
+      <div class="flow-box blue">
+        <div class="name">5. BCrypt.encode(password, cost=12)</div>
+        <div class="label">~250ms intentionally. Brute-force protection.</div>
+      </div>
+      <div class="flow-arrow">↓</div>
+      <div class="flow-box blue">
+        <div class="name">6. INSERT into auth.users</div>
+        <div class="label">ULID generated in @PrePersist → time-sortable ID</div>
+      </div>
+      <div class="flow-arrow">↓</div>
+      <div class="flow-box blue">
+        <div class="name">7. JwtProvider.generateAccessToken(user)</div>
+        <div class="label">RS256 sign → { sub: userId, email, name, plan, exp: +15min }</div>
+      </div>
+      <div class="flow-arrow">↓</div>
+      <div class="flow-box blue">
+        <div class="name">8. Generate refresh token (32 random bytes)</div>
+        <div class="label">Store SHA-256(rawToken) in auth.refresh_tokens</div>
+      </div>
+      <div class="flow-arrow">↓</div>
+      <div class="flow-box green">
+        <div class="name">9. Return 201 { accessToken, refreshToken, user }</div>
+        <div class="label">Frontend stores accessToken in memory, refreshToken in httpOnly cookie</div>
+      </div>
+    </div>
+
+    <!-- Login flow -->
+    <div class="card">
+      <h2>🔑 Login + Token Refresh Flow</h2>
+      <div class="flow-box blue">
+        <div class="name">1. Browser → POST /api/auth/login</div>
+        <div class="label">{ email, password }</div>
+      </div>
+      <div class="flow-arrow">↓</div>
+      <div class="flow-box blue">
+        <div class="name">2. Find user by email</div>
+        <div class="label">If not found → BCrypt dummy compare (timing-safe, no email enum)</div>
+      </div>
+      <div class="flow-arrow">↓</div>
+      <div class="flow-box blue">
+        <div class="name">3. BCrypt.matches(plain, hash)</div>
+        <div class="label">Timing-safe comparison. Same 401 for wrong email AND wrong password.</div>
+      </div>
+      <div class="flow-arrow">↓</div>
+      <div class="flow-box green">
+        <div class="name">4. Return 200 { accessToken, refreshToken, user }</div>
+      </div>
+
+      <hr class="divider">
+
+      <div style="font-weight:600; font-size:14px; margin-bottom:12px;">♻️ Token Refresh (every 15 min)</div>
+      <div class="flow-box blue">
+        <div class="name">1. Browser → POST /api/auth/refresh</div>
+        <div class="label">{ refreshToken: "base64url..." }</div>
+      </div>
+      <div class="flow-arrow">↓</div>
+      <div class="flow-box blue">
+        <div class="name">2. SHA-256(incoming_token) → look up in DB</div>
+        <div class="label">Not found → 401. Revoked → replay attack detected!</div>
+      </div>
+      <div class="flow-arrow">↓</div>
+      <div class="flow-box red">
+        <div class="name">3. If already revoked → REVOKE ALL USER TOKENS</div>
+        <div class="label">Possible token theft. Force re-login everywhere.</div>
+      </div>
+      <div class="flow-arrow">↓</div>
+      <div class="flow-box blue">
+        <div class="name">4. Mark old token revoked (rotation)</div>
+        <div class="label">Issue new accessToken + new refreshToken</div>
+      </div>
+      <div class="flow-arrow">↓</div>
+      <div class="flow-box green">
+        <div class="name">5. Return 200 { new accessToken, new refreshToken }</div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- JWT structure -->
+  <div class="card">
+    <h2>🎟 JWT Token Structure (what's inside)</h2>
+    <div class="two-col">
+      <div>
+        <h3>Access Token (15 min, RS256)</h3>
+        <div class="code-block"><span class="cmt">// Header</span>
+{
+  <span class="str">"alg"</span>: <span class="str">"RS256"</span>,
+  <span class="str">"typ"</span>: <span class="str">"JWT"</span>
+}
+
+<span class="cmt">// Payload</span>
+{
+  <span class="str">"sub"</span>: <span class="str">"01J9TCRZ3BPQVKMJ0GTS"</span>,  <span class="cmt">← ULID user ID</span>
+  <span class="str">"email"</span>: <span class="str">"alice@example.com"</span>,
+  <span class="str">"name"</span>: <span class="str">"Alice"</span>,
+  <span class="str">"plan"</span>: <span class="str">"free"</span>,        <span class="cmt">← feature gating</span>
+  <span class="str">"iat"</span>: 1700000000,
+  <span class="str">"exp"</span>: 1700000900        <span class="cmt">← iat + 15 min</span>
+}
+
+<span class="cmt">// Signature: RSA_SIGN(privateKey, header+payload)</span>
+<span class="cmt">// Only auth-service can SIGN. Anyone with public key can VERIFY.</span></div>
+      </div>
+      <div>
+        <h3>Why RS256 (not HS256)?</h3>
+        <div style="font-size:13px; color:#8b949e; line-height:1.8; margin-bottom:16px;">
+          <div>🔴 <b>HS256</b> = ONE secret for sign + verify</div>
+          <div style="margin-left:20px;">→ portfolio-service needs the secret</div>
+          <div style="margin-left:20px;">→ if portfolio-service is hacked, attacker can forge tokens</div>
+          <br>
+          <div>🟢 <b>RS256</b> = Private key signs, Public key verifies</div>
+          <div style="margin-left:20px;">→ Only auth-service has private key</div>
+          <div style="margin-left:20px;">→ portfolio/market get public key only</div>
+          <div style="margin-left:20px;">→ Can verify but can't forge — secure</div>
+        </div>
+        <h3>Files that implement this</h3>
+        <ul class="file-list">
+          <li><span class="dot dot-green"></span>security/JwtProvider.java — sign + verify</li>
+          <li><span class="dot dot-green"></span>security/SecurityConfig.java — BCrypt + CORS</li>
+          <li><span class="dot dot-green"></span>service/AuthService.java — business logic</li>
+          <li><span class="dot dot-red"></span>controller/AuthController.java — HTTP endpoints ← next</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ══════════════════════════════════════════════
+     TAB 5: LIVE PRICE FLOW
+══════════════════════════════════════════════ -->
+<div class="tab-content" id="tab-priceflow">
+  <div class="card">
+    <h2>📡 Live Price Flow — How a Browser Gets Real-Time Updates</h2>
+    <p style="color:#8b949e; font-size:13px; margin-bottom:20px;">
+      One price update from Yahoo Finance → Redis → ALL connected browsers watching that ticker. Zero polling.
+    </p>
+  </div>
+
+  <div class="two-col">
+    <!-- Step by step -->
+    <div>
+      <div class="flow-box purple">
+        <div class="name">① Market-Data-Service (every 60s)</div>
+        <div class="label">@Scheduled → scrape Yahoo Finance for STRC, JEPI, etc.</div>
+      </div>
+      <div class="flow-arrow">↓</div>
+      <div class="flow-box purple">
+        <div class="name">② Save to market.price_history</div>
+        <div class="label">INSERT stock prices into PostgreSQL</div>
+      </div>
+      <div class="flow-arrow">↓</div>
+      <div class="flow-box red">
+        <div class="name">③ Redis PUBLISH prices:live</div>
+        <div class="label">{"ticker":"STRC","yield":11.5,"price":99.8,"type":"PRICE_UPDATE"}</div>
+      </div>
+      <div class="flow-arrow">↓ Redis pushes to ALL subscribers instantly</div>
+      <div class="flow-box yellow">
+        <div class="name">④ Gateway: RedisSubscriberConfig.receive()</div>
+        <div class="label">Reactive subscription to prices:live channel</div>
+      </div>
+      <div class="flow-arrow">↓</div>
+      <div class="flow-box yellow">
+        <div class="name">⑤ Parse ticker from JSON</div>
+        <div class="label">objectMapper.readTree(json).path("ticker").asText()</div>
+      </div>
+      <div class="flow-arrow">↓</div>
+      <div class="flow-box yellow">
+        <div class="name">⑥ PriceFanOutHandler.fanOut("STRC", json)</div>
+        <div class="label">SessionRegistry.getSessionsFor("STRC") → 3 sessions</div>
+      </div>
+      <div class="flow-arrow">↓</div>
+      <div class="flow-box green">
+        <div class="name">⑦ session.send(textMessage(json)) × 3 sessions</div>
+        <div class="label">Flux.fromIterable(sessions).flatMap(s → s.send(...))</div>
+      </div>
+      <div class="flow-arrow">↓</div>
+      <div class="flow-box green">
+        <div class="name">⑧ Browser WebSocket onmessage fires</div>
+        <div class="label">UI updates dividend yield live — no page refresh needed</div>
+      </div>
+    </div>
+
+    <!-- Gateway internals -->
+    <div>
+      <div class="card" style="margin: 0;">
+        <h2>🚪 Gateway — Two Jobs in One</h2>
+        <div style="font-size:13px; color:#8b949e; margin-bottom:16px;">
+          Spring Cloud Gateway does double duty: HTTP proxy + WebSocket server.
+        </div>
+
+        <h3 style="margin-bottom: 10px;">Job 1 — HTTP Proxy (Spring Cloud Gateway)</h3>
+        <div class="flow-box blue" style="margin-bottom:6px;">
+          <div class="name">GET /api/portfolio/** → :8082</div>
+        </div>
+        <div class="flow-box blue" style="margin-bottom:6px;">
+          <div class="name">POST /api/auth/** → :8081</div>
+        </div>
+        <div class="flow-box blue" style="margin-bottom:16px;">
+          <div class="name">GET /api/market/** → :8083</div>
+        </div>
+
+        <h3 style="margin-bottom: 10px;">Job 2 — WebSocket Server (our custom code)</h3>
+        <div class="flow-box yellow" style="margin-bottom:6px;">
+          <div class="name">ws://gateway/ws?tickers=STRC,JEPI</div>
+          <div class="label">Browser connects here for live prices</div>
+        </div>
+        <div class="flow-box yellow" style="margin-bottom:6px;">
+          <div class="name">PriceFanOutHandler handles the session</div>
+          <div class="label">Parses tickers → registers in SessionRegistry</div>
+        </div>
+        <div class="flow-box yellow" style="margin-bottom:16px;">
+          <div class="name">SessionRegistry: "STRC" → {Alice, Bob, Carol}</div>
+          <div class="label">ConcurrentHashMap — thread-safe</div>
+        </div>
+
+        <div style="background:#1a2510; border:1px solid #238636; border-radius:8px; padding:12px; font-size:12px; color:#8b949e;">
+          <b style="color:#3fb950;">Key trick: order=-1</b><br>
+          WebSocketConfig uses order=-1 so our WS handler runs BEFORE
+          Spring Cloud Gateway tries to proxy /ws to a backend service.
+          Without this, SCG would intercept the WebSocket upgrade.
+        </div>
+      </div>
+
+      <div class="card" style="margin: 16px 0 0 0;">
+        <h2>📁 Gateway Files & Their Job</h2>
+        <ul class="file-list">
+          <li><span class="dot dot-green"></span>WebSocketConfig.java — registers /ws with order=-1</li>
+          <li><span class="dot dot-green"></span>PriceFanOutHandler.java — WS session manager + fan-out</li>
+          <li><span class="dot dot-green"></span>SessionRegistry.java — ticker→sessions ConcurrentHashMap</li>
+          <li><span class="dot dot-green"></span>RedisSubscriberConfig.java — Redis prices:live subscriber</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ══════════════════════════════════════════════
+     TAB 6: WHAT'S NEXT
+══════════════════════════════════════════════ -->
+<div class="tab-content" id="tab-whats-next">
+
+  <div class="card" style="border-color:#d29922;">
+    <h2>🚧 What's Left to Build — Priority Order</h2>
+    <p style="color:#8b949e; font-size:13px; margin-bottom:20px;">
+      Everything below is the build sequence. Items 1–3 unlock the rest.
+    </p>
+
+    <div class="flow-box yellow">
+      <div class="name">① AuthController.java <span class="badge partial">90% — missing 1 file</span></div>
+      <div class="label">POST /api/auth/register, /login, /refresh, /logout → calls AuthService (already done)</div>
+    </div>
+    <div class="flow-arrow">↓ after this auth-service is 100% done</div>
+
+    <div class="flow-box blue">
+      <div class="name">② Portfolio-Service — Holding + Alert entities</div>
+      <div class="label">model/Holding.java, model/Alert.java, repos, JwtVerifyFilter.java</div>
+    </div>
+    <div class="flow-arrow">↓</div>
+
+    <div class="flow-box blue">
+      <div class="name">③ Portfolio-Service — PortfolioService + PortfolioController</div>
+      <div class="label">GET/POST/DELETE /api/portfolio/holdings, /api/portfolio/summary</div>
+    </div>
+    <div class="flow-arrow">↓</div>
+
+    <div class="flow-box purple">
+      <div class="name">④ Market-Data-Service — Stock entity + YahooFinanceScraper</div>
+      <div class="label">MarketDataProvider interface + Yahoo scraper + Resilience4j circuit breaker</div>
+    </div>
+    <div class="flow-arrow">↓</div>
+
+    <div class="flow-box purple">
+      <div class="name">⑤ Market-Data-Service — PriceFetchScheduler + Redis publisher</div>
+      <div class="label">@Scheduled every 60s → scrape → save → PUBLISH prices:live</div>
+    </div>
+    <div class="flow-arrow">↓</div>
+
+    <div class="flow-box green">
+      <div class="name">⑥ Connect Frontend to Microservices</div>
+      <div class="label">Update lib/api.ts to hit gateway → services (not the monolith)</div>
+    </div>
+    <div class="flow-arrow">↓</div>
+
+    <div class="flow-box green">
+      <div class="name">⑦ End-to-End Test with docker compose up</div>
+      <div class="label">Register → Login → Add holding → See live price → Dividend calculation</div>
+    </div>
+    <div class="flow-arrow">↓</div>
+
+    <div class="flow-box" style="border-color:#7c3aed; background:#1a0d2e;">
+      <div class="name">⑧ Deploy to Free Stack (optional)</div>
+      <div class="label">Vercel (frontend) + Railway (4 Java services) + Supabase (Postgres) + Upstash (Redis)</div>
+    </div>
+  </div>
+
+  <!-- What exists summary -->
+  <div class="card">
+    <h2>✅ Quick Reference — What Already Exists vs What to Build</h2>
+    <div class="two-col">
+      <div>
+        <h3 style="color:#3fb950; margin-bottom:10px;">✅ Already Built</h3>
+        <ul class="file-list">
+          <li><span class="dot dot-green"></span>Gateway — complete WebSocket fan-out</li>
+          <li><span class="dot dot-green"></span>Auth: User entity + JPA</li>
+          <li><span class="dot dot-green"></span>Auth: RefreshToken entity + JPA</li>
+          <li><span class="dot dot-green"></span>Auth: JwtProvider (RS256 sign/verify)</li>
+          <li><span class="dot dot-green"></span>Auth: SecurityConfig (BCrypt cost=12)</li>
+          <li><span class="dot dot-green"></span>Auth: AuthService (register/login/refresh/logout)</li>
+          <li><span class="dot dot-green"></span>Auth: GlobalExceptionHandler (ProblemDetail)</li>
+          <li><span class="dot dot-green"></span>Auth: All DTOs (RegisterRequest etc)</li>
+          <li><span class="dot dot-green"></span>Auth: V1__init_auth.sql migration</li>
+          <li><span class="dot dot-green"></span>Docker Compose (all services + healthchecks)</li>
+          <li><span class="dot dot-green"></span>init-schemas.sql (3 schemas)</li>
+          <li><span class="dot dot-green"></span>Frontend Next.js pages</li>
+          <li><span class="dot dot-green"></span>Monolith — fully working</li>
+        </ul>
+      </div>
+      <div>
+        <h3 style="color:#f85149; margin-bottom:10px;">🔴 Still Needed</h3>
+        <ul class="file-list">
+          <li><span class="dot dot-red"></span>AuthController.java ← next file!</li>
+          <li><span class="dot dot-red"></span>Portfolio: Holding.java entity</li>
+          <li><span class="dot dot-red"></span>Portfolio: Alert.java entity</li>
+          <li><span class="dot dot-red"></span>Portfolio: PortfolioService.java</li>
+          <li><span class="dot dot-red"></span>Portfolio: PortfolioController.java</li>
+          <li><span class="dot dot-red"></span>Portfolio: JwtVerifyFilter.java</li>
+          <li><span class="dot dot-red"></span>Market: Stock.java entity</li>
+          <li><span class="dot dot-red"></span>Market: YahooFinanceScraper.java</li>
+          <li><span class="dot dot-red"></span>Market: PriceFetchScheduler.java</li>
+          <li><span class="dot dot-red"></span>Market: Redis publisher (prices:live)</li>
+          <li><span class="dot dot-red"></span>Frontend: connect to microservices API</li>
+          <li><span class="dot dot-red"></span>RSA key pair (openssl command)</li>
+          <li><span class="dot dot-red"></span>.env file with real secrets</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- openssl instructions -->
+  <div class="card">
+    <h2>🔑 Before You Can Run: Generate RSA Key Pair</h2>
+    <p style="font-size:13px; color:#8b949e; margin-bottom:12px;">
+      JwtProvider loads RSA keys from env vars at startup. Run these once:
+    </p>
+    <div class="code-block"><span class="cmt"># 1. Generate 2048-bit RSA private key</span>
+openssl genrsa -out private.pem 2048
+
+<span class="cmt"># 2. Convert to PKCS#8 format (what Java's KeyFactory expects)</span>
+openssl pkcs8 -topk8 -inform PEM -outform PEM -nocrypt \
+  -in private.pem -out private_pkcs8.pem
+
+<span class="cmt"># 3. Extract public key</span>
+openssl rsa -pubout -in private.pem -out public.pem
+
+<span class="cmt"># 4. Set in .env (replace newlines with \n for env vars)</span>
+JWT_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\nMIIEvg...\n-----END PRIVATE KEY-----"
+JWT_PUBLIC_KEY="-----BEGIN PUBLIC KEY-----\nMIIBIj...\n-----END PUBLIC KEY-----"</div>
+    <p style="font-size:12px; color:#8b949e;">
+      ⚠️ Never commit private_pkcs8.pem to git. Add to .gitignore. Keep it in .env which is already gitignored.
+    </p>
+  </div>
+
+</div>
+
+
+<script>
+// Tab switching
+document.querySelectorAll('.tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+    tab.classList.add('active');
+    document.getElementById('tab-' + tab.dataset.tab).classList.add('active');
+  });
+});
+
+// Animate progress bars on load
+window.addEventListener('load', () => {
+  const fills = document.querySelectorAll('.progress-fill');
+  fills.forEach(fill => {
+    const target = fill.style.width;
+    fill.style.width = '0%';
+    setTimeout(() => { fill.style.width = target; }, 100);
+  });
+});
+</script>
+</body>
+</html>

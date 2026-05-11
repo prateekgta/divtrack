@@ -1,0 +1,10 @@
+target/
+.idea/
+.DS_Store
+*.md
+gateway/
+services/
+k8s/
+.claude/
+frontend/node_modules/
+frontend/.next/

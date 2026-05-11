@@ -1,0 +1,77 @@
+server:
+  port: 3000
+
+spring:
+  application:
+    name: api-gateway
+  cloud:
+    gateway:
+      routes:
+        # --- Public auth routes (no JWT required) ---
+        - id: auth-public
+          uri: ${AUTH_SERVICE_URL:http://localhost:8081}
+          predicates:
+            - Path=/v1/auth/login, /v1/auth/register, /v1/auth/refresh, /v1/auth/forgot-password
+
+        # --- Protected auth routes ---
+        - id: auth-protected
+          uri: ${AUTH_SERVICE_URL:http://localhost:8081}
+          predicates:
+            - Path=/v1/auth/**
+          filters:
+            - name: JwtAuthFilter
+
+        # --- Portfolio routes (all protected) ---
+        - id: portfolio
+          uri: ${PORTFOLIO_SERVICE_URL:http://localhost:8082}
+          predicates:
+            - Path=/v1/portfolio/**
+          filters:
+            - name: JwtAuthFilter
+            - name: RequestRateLimiter
+              args:
+                redis-rate-limiter.replenishRate: 20
+                redis-rate-limiter.burstCapacity: 50
+                key-resolver: "#{@userKeyResolver}"
+
+        # --- Market public routes ---
+        - id: market-public
+          uri: ${MARKET_SERVICE_URL:http://localhost:8083}
+          predicates:
+            - Path=/v1/market/stocks, /v1/market/stocks/*, /v1/market/calculate, /v1/market/compare
+          filters:
+            - name: RequestRateLimiter
+              args:
+                redis-rate-limiter.replenishRate: 100
+                redis-rate-limiter.burstCapacity: 200
+                key-resolver: "#{@ipKeyResolver}"
+
+        # --- Market protected routes ---
+        - id: market-protected
+          uri: ${MARKET_SERVICE_URL:http://localhost:8083}
+          predicates:
+            - Path=/v1/market/**
+          filters:
+            - name: JwtAuthFilter
+
+      # WebSocket route (proxied to market-data-service WS handler)
+      # ws://gateway:3000/ws -> ws://market-data-service:8083/ws
+      websocket:
+        path-prefix: /ws
+
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          public-key-location: ${JWT_PUBLIC_KEY_LOCATION:classpath:keys/public.pem}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health, info, metrics

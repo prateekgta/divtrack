@@ -1,0 +1,1 @@
+ALTER TABLE stocks ADD COLUMN IF NOT EXISTS category VARCHAR(30) DEFAULT 'income';

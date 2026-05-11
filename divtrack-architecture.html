@@ -1,0 +1,588 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>DivTrack — Architecture Explorer</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{background:#0b1120;color:#e2e8f0;font-family:'Segoe UI',system-ui,sans-serif;height:100vh;display:flex;flex-direction:column;overflow:hidden}
+
+header{padding:10px 20px;background:#0f1930;border-bottom:1px solid #1e3050;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;gap:12px}
+header h1{font-size:1rem;color:#93c5fd;white-space:nowrap}
+header h1 span{color:#60a5fa;font-weight:800}
+.tabs{display:flex;gap:5px;overflow-x:auto;flex-wrap:nowrap;-webkit-overflow-scrolling:touch;padding-bottom:2px}
+.tabs::-webkit-scrollbar{height:3px}.tabs::-webkit-scrollbar-thumb{background:#334155;border-radius:2px}
+.tab{padding:5px 12px;border-radius:16px;border:1px solid #334155;background:#1e293b;color:#94a3b8;cursor:pointer;font-size:0.7rem;font-weight:500;transition:all .2s;white-space:nowrap;flex-shrink:0}
+.tab:hover{border-color:#60a5fa;color:#bfdbfe}
+.tab.active{background:#1d4ed8;border-color:#3b82f6;color:#fff}
+.tab[data-flow="login"].active{background:#065f46;border-color:#10b981}
+.tab[data-flow="holding"].active{background:#78350f;border-color:#f59e0b}
+.tab[data-flow="prices"].active{background:#7c1d1d;border-color:#ef4444}
+.tab[data-flow="pubsub"].active{background:#1a0d4e;border-color:#8b5cf6}
+.tab[data-flow="gateway"].active{background:#0c2340;border-color:#3b82f6}
+.tab[data-flow="hosting"].active{background:#042f2e;border-color:#14b8a6}
+.tab[data-flow="challenges"].active{background:#1c1917;border-color:#f97316}
+
+main{display:flex;flex:1;overflow:hidden}
+#diagram-wrap{flex:1;display:flex;align-items:center;justify-content:center;overflow:hidden;padding:12px;position:relative}
+#arch-svg{width:100%;height:100%;max-height:480px}
+#mini-svg-wrap{width:100%;height:100%;max-height:480px;display:none;align-items:center;justify-content:center}
+#mini-svg-wrap svg{width:100%;height:100%}
+
+#panel{width:320px;background:#0f1930;border-left:1px solid #1e3050;display:flex;flex-direction:column;overflow:hidden;flex-shrink:0}
+.flow-info{display:none;flex-direction:column;overflow-y:auto;flex:1}
+.flow-info.active{display:flex}
+.flow-title{padding:16px 18px 6px;font-size:.9rem;font-weight:700}
+.flow-desc{padding:0 18px 12px;font-size:.72rem;color:#94a3b8;line-height:1.6}
+.flow-desc code{background:#1e293b;padding:1px 4px;border-radius:3px;font-size:.68rem;color:#7dd3fc}
+.flow-desc strong{color:#e2e8f0}
+
+.steps{padding:0 18px;display:flex;flex-direction:column}
+.step{display:flex;gap:9px;padding:8px 0 8px 12px;border-left:2px solid #1e3050;position:relative;transition:all .3s}
+.step::before{content:'';position:absolute;left:-6px;top:12px;width:10px;height:10px;border-radius:50%;background:#1e3050;border:2px solid #334155;transition:all .3s}
+.step.active::before{background:var(--fc);border-color:var(--fc);box-shadow:0 0 8px var(--fc)}
+.step.done::before{background:#334155;border-color:#334155}
+.step-num{font-size:.6rem;font-weight:700;color:#475569;min-width:14px;margin-top:2px}
+.step-text{font-size:.7rem;color:#475569;line-height:1.5;transition:color .3s}
+.step-text code{background:#0f172a;padding:1px 4px;border-radius:3px;color:#7dd3fc;font-size:.65rem}
+.step.active .step-text{color:#e2e8f0}.step.done .step-text{color:#374151}
+
+.info-card{margin:0 14px 10px;padding:12px;border-radius:8px;border-left:3px solid}
+.info-card.purple{border-color:#8b5cf6;background:#1a0d33}
+.info-card.blue{border-color:#3b82f6;background:#0c2340}
+.info-card.green{border-color:#10b981;background:#052e16}
+.info-card.red{border-color:#ef4444;background:#1a0707}
+.info-card.amber{border-color:#f59e0b;background:#1a1200}
+.info-card.teal{border-color:#14b8a6;background:#031a19}
+.info-card h3{font-size:.73rem;font-weight:700;color:#e2e8f0;margin-bottom:5px}
+.info-card p{font-size:.68rem;color:#94a3b8;line-height:1.55;margin-bottom:5px}
+.info-card code{background:#0f172a;padding:1px 4px;border-radius:3px;color:#7dd3fc;font-size:.65rem}
+.info-card .fix{font-size:.65rem;color:#4ade80;margin-top:5px}
+.info-card .warn{font-size:.65rem;color:#fbbf24;margin-top:5px}
+
+.code-block{background:#060d1a;border:1px solid #1e3050;border-radius:5px;padding:9px;font-family:monospace;font-size:.62rem;color:#a78bfa;line-height:1.7;margin-top:6px;overflow-x:auto;white-space:pre}
+.kw{color:#c4b5fd}.str{color:#86efac}.ann{color:#fbbf24}.cm{color:#374151}
+
+.legend{padding:12px 18px;border-top:1px solid #1e3050;flex-shrink:0}
+.legend h2{font-size:.62rem;text-transform:uppercase;letter-spacing:.1em;color:#475569;margin-bottom:7px}
+.legend-items{display:flex;flex-wrap:wrap;gap:6px}
+.legend-item{display:flex;align-items:center;gap:4px;font-size:.63rem;color:#64748b}
+.legend-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.click-hint{padding:8px 18px;font-size:.64rem;color:#334155;text-align:center;border-top:1px solid #1e3050}
+
+#drawer{position:fixed;bottom:-100%;left:0;right:0;background:#0f1930;border-top:2px solid #1e3050;padding:18px 24px;transition:bottom .35s cubic-bezier(.4,0,.2,1);z-index:100;max-height:260px}
+#drawer.open{bottom:0}
+#drawer-close{position:absolute;top:12px;right:16px;background:none;border:none;color:#64748b;cursor:pointer;font-size:1rem}
+#drawer h3{font-size:.8rem;margin-bottom:12px}
+.drawer-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:8px}
+.drawer-item{background:#1e293b;border:1px solid #334155;border-radius:6px;padding:9px}
+.di-label{font-size:.58rem;text-transform:uppercase;letter-spacing:.08em;color:#64748b;margin-bottom:2px}
+.di-val{font-size:.68rem;color:#e2e8f0;font-family:monospace}
+</style>
+</head>
+<body>
+<header>
+  <h1><span>Div</span>Track Explorer</h1>
+  <div class="tabs">
+    <button class="tab active" data-flow="overview">Overview</button>
+    <button class="tab" data-flow="login">Login</button>
+    <button class="tab" data-flow="holding">Add Holding</button>
+    <button class="tab" data-flow="prices">Live Prices</button>
+    <button class="tab" data-flow="pubsub">Pub/Sub Deep Dive</button>
+    <button class="tab" data-flow="gateway">Gateway Internals</button>
+    <button class="tab" data-flow="hosting">Free Hosting</button>
+    <button class="tab" data-flow="challenges">Challenges Fixed</button>
+  </div>
+</header>
+<main>
+<div id="diagram-wrap">
+  <!-- MAIN ARCHITECTURE SVG (shown for overview/flow tabs) -->
+  <svg id="arch-svg" viewBox="0 0 980 480" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <marker id="ag"  markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#334155"/></marker>
+      <marker id="agr" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#10b981"/></marker>
+      <marker id="aam" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#f59e0b"/></marker>
+      <marker id="ar"  markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#ef4444"/></marker>
+      <marker id="ap"  markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#a855f7"/></marker>
+      <filter id="fg"><feGaussianBlur stdDeviation="3" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+      <filter id="fa"><feGaussianBlur stdDeviation="3" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+      <filter id="fr"><feGaussianBlur stdDeviation="3" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+      <filter id="fp"><feGaussianBlur stdDeviation="4" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+    </defs>
+    <!-- Static lines -->
+    <line x1="145" y1="240" x2="225" y2="240" stroke="#1e3050" stroke-width="2" marker-end="url(#ag)"/>
+    <path d="M340 220 L340 100 L410 100" stroke="#1e3050" stroke-width="2" fill="none" marker-end="url(#ag)"/>
+    <line x1="340" y1="240" x2="410" y2="240" stroke="#1e3050" stroke-width="2" marker-end="url(#ag)"/>
+    <path d="M340 260 L340 380 L410 380" stroke="#1e3050" stroke-width="2" fill="none" marker-end="url(#ag)"/>
+    <line x1="540" y1="100" x2="625" y2="100" stroke="#1e3050" stroke-width="2" marker-end="url(#ag)"/>
+    <line x1="540" y1="240" x2="625" y2="240" stroke="#1e3050" stroke-width="2" marker-end="url(#ag)"/>
+    <line x1="540" y1="370" x2="625" y2="340" stroke="#1e3050" stroke-width="2" marker-end="url(#ag)"/>
+    <line x1="540" y1="392" x2="625" y2="412" stroke="#1e3050" stroke-width="2" marker-end="url(#ag)"/>
+    <line x1="475" y1="408" x2="475" y2="446" stroke="#1e3050" stroke-width="1.5" stroke-dasharray="4 3" marker-end="url(#ag)"/>
+    <path d="M660 430 Q500 490 340 265" stroke="#2d1b4e" stroke-width="1.5" stroke-dasharray="5 4" fill="none" marker-end="url(#ap)"/>
+    <path d="M540 255 Q600 290 660 415" stroke="#1e3050" stroke-width="1.5" stroke-dasharray="3 3" fill="none" marker-end="url(#ag)"/>
+    <!-- Flow highlight groups -->
+    <g id="fll" opacity="0"><line x1="145" y1="240" x2="225" y2="240" stroke="#10b981" stroke-width="2.5" marker-end="url(#agr)"/><path d="M340 220 L340 100 L410 100" stroke="#10b981" stroke-width="2.5" fill="none" marker-end="url(#agr)"/><line x1="540" y1="100" x2="625" y2="100" stroke="#10b981" stroke-width="2.5" marker-end="url(#agr)"/></g>
+    <g id="fhl" opacity="0"><line x1="145" y1="240" x2="225" y2="240" stroke="#f59e0b" stroke-width="2.5" marker-end="url(#aam)"/><line x1="340" y1="240" x2="410" y2="240" stroke="#f59e0b" stroke-width="2.5" marker-end="url(#aam)"/><line x1="540" y1="240" x2="625" y2="240" stroke="#f59e0b" stroke-width="2.5" marker-end="url(#aam)"/><path d="M540 255 Q600 290 660 415" stroke="#f59e0b" stroke-width="2" stroke-dasharray="5 3" fill="none" marker-end="url(#aam)"/></g>
+    <g id="fpl" opacity="0"><line x1="475" y1="446" x2="475" y2="410" stroke="#ef4444" stroke-width="2.5" stroke-dasharray="4 3" marker-end="url(#ar)"/><line x1="540" y1="392" x2="625" y2="414" stroke="#ef4444" stroke-width="2.5" marker-end="url(#ar)"/><path d="M660 430 Q500 490 340 265" stroke="#a855f7" stroke-width="2.5" stroke-dasharray="5 4" fill="none" marker-end="url(#ap)"/><line x1="225" y1="240" x2="145" y2="240" stroke="#a855f7" stroke-width="2.5" marker-end="url(#ap)"/></g>
+    <!-- Particles -->
+    <circle id="p-login" r="7" fill="#10b981" filter="url(#fg)" opacity="0"/>
+    <circle id="p-holding" r="7" fill="#f59e0b" filter="url(#fa)" opacity="0"/>
+    <circle id="p-pa" r="7" fill="#ef4444" filter="url(#fr)" opacity="0"/>
+    <circle id="p-pb" r="7" fill="#a855f7" filter="url(#fp)" opacity="0"/>
+    <!-- DB note -->
+    <rect x="570" y="10" width="220" height="28" rx="6" fill="#052e16" stroke="#10b981" stroke-width="1"/>
+    <text x="680" y="28" text-anchor="middle" fill="#6ee7b7" font-size="9" font-weight="600">✓ Single PostgreSQL · 3 schemas (auth/portfolio/market)</text>
+    <!-- Service boxes -->
+    <g id="box-browser" class="service-box" data-id="browser" cursor="pointer"><rect x="20" y="210" width="125" height="60" rx="10" fill="#0c2340" stroke="#3b82f6" stroke-width="1.5"/><text x="82" y="232" text-anchor="middle" fill="#93c5fd" font-size="8.5" font-weight="600">FRONTEND</text><text x="82" y="250" text-anchor="middle" fill="#bfdbfe" font-size="12" font-weight="700">Browser</text><text x="82" y="263" text-anchor="middle" fill="#60a5fa" font-size="7.5">Next.js 14 · TypeScript</text></g>
+    <g id="box-gateway" class="service-box" data-id="gateway" cursor="pointer"><rect x="225" y="210" width="130" height="60" rx="10" fill="#1a0d33" stroke="#8b5cf6" stroke-width="1.5"/><text x="290" y="231" text-anchor="middle" fill="#c4b5fd" font-size="8.5" font-weight="600">SPRING CLOUD GATEWAY</text><text x="290" y="249" text-anchor="middle" fill="#ddd6fe" font-size="12" font-weight="700">API Gateway</text><text x="290" y="262" text-anchor="middle" fill="#a78bfa" font-size="7.5">JWT · Rate Limit · WS Fan-out · :3000</text></g>
+    <g id="box-auth" class="service-box" data-id="auth" cursor="pointer"><rect x="410" y="72" width="130" height="56" rx="10" fill="#052e16" stroke="#10b981" stroke-width="1.5"/><text x="475" y="92" text-anchor="middle" fill="#6ee7b7" font-size="8.5" font-weight="600">SPRING BOOT 3</text><text x="475" y="108" text-anchor="middle" fill="#a7f3d0" font-size="12" font-weight="700">Auth Service</text><text x="475" y="121" text-anchor="middle" fill="#34d399" font-size="7.5">BCrypt · RS256 · :8081</text></g>
+    <g id="box-portfolio" class="service-box" data-id="portfolio" cursor="pointer"><rect x="410" y="212" width="130" height="56" rx="10" fill="#2d1800" stroke="#f59e0b" stroke-width="1.5"/><text x="475" y="232" text-anchor="middle" fill="#fcd34d" font-size="8.5" font-weight="600">SPRING BOOT 3</text><text x="475" y="249" text-anchor="middle" fill="#fde68a" font-size="12" font-weight="700">Portfolio Service</text><text x="475" y="262" text-anchor="middle" fill="#f59e0b" font-size="7.5">Holdings · Alerts · :8082</text></g>
+    <g id="box-market" class="service-box" data-id="market" cursor="pointer"><rect x="410" y="352" width="130" height="56" rx="10" fill="#2d0707" stroke="#ef4444" stroke-width="1.5"/><text x="475" y="372" text-anchor="middle" fill="#fca5a5" font-size="8.5" font-weight="600">SPRING BOOT 3</text><text x="475" y="389" text-anchor="middle" fill="#fecaca" font-size="12" font-weight="700">Market Data</text><text x="475" y="402" text-anchor="middle" fill="#ef4444" font-size="7.5">Jsoup · Resilience4j · :8083</text></g>
+    <!-- Single DB box (wider, note 3 schemas) -->
+    <g id="box-db" class="service-box" data-id="singledb" cursor="pointer">
+      <rect x="625" y="72" width="260" height="200" rx="10" fill="#0f0a1a" stroke="#6366f1" stroke-width="1.5" stroke-dasharray="6 3"/>
+      <text x="755" y="94" text-anchor="middle" fill="#818cf8" font-size="8" font-weight="600" letter-spacing="0.08em">SINGLE POSTGRESQL 16 · divtrack DB</text>
+      <rect x="635" y="100" width="240" height="46" rx="7" fill="#1e1b4b" stroke="#6366f1" stroke-width="1"/>
+      <text x="755" y="119" text-anchor="middle" fill="#a5b4fc" font-size="8.5" font-weight="700">auth schema</text>
+      <text x="755" y="133" text-anchor="middle" fill="#818cf8" font-size="7">users · refresh_tokens · flyway_schema_history</text>
+      <rect x="635" y="154" width="240" height="46" rx="7" fill="#2d1800" stroke="#f59e0b" stroke-width="1"/>
+      <text x="755" y="173" text-anchor="middle" fill="#fde68a" font-size="8.5" font-weight="700">portfolio schema</text>
+      <text x="755" y="187" text-anchor="middle" fill="#f59e0b" font-size="7">holdings · alerts · flyway_schema_history</text>
+      <rect x="635" y="208" width="240" height="46" rx="7" fill="#2d0707" stroke="#ef4444" stroke-width="1"/>
+      <text x="755" y="227" text-anchor="middle" fill="#fecaca" font-size="8.5" font-weight="700">market schema</text>
+      <text x="755" y="241" text-anchor="middle" fill="#ef4444" font-size="7">stocks · price_history · flyway_schema_history</text>
+    </g>
+    <!-- Redis -->
+    <g id="box-redis" class="service-box" data-id="redis" cursor="pointer"><rect x="625" y="390" width="120" height="50" rx="10" fill="#3d0000" stroke="#dc2626" stroke-width="1.5"/><text x="685" y="410" text-anchor="middle" fill="#fca5a5" font-size="8.5" font-weight="600">REDIS 7</text><text x="685" y="426" text-anchor="middle" fill="#fecaca" font-size="12" font-weight="700">Redis</text><text x="685" y="437" text-anchor="middle" fill="#ef4444" font-size="7.5">Cache · Pub/Sub · Rate Limit</text></g>
+    <!-- Yahoo -->
+    <g id="box-yahoo"><rect x="420" y="446" width="110" height="26" rx="5" fill="#1a1200" stroke="#ca8a04" stroke-width="1" stroke-dasharray="4 2"/><text x="475" y="463" text-anchor="middle" fill="#fbbf24" font-size="9.5" font-weight="600">Yahoo Finance</text></g>
+    <!-- DB connection lines (to single DB) -->
+    <line x1="540" y1="100" x2="635" y2="124" stroke="#1e3050" stroke-width="2" marker-end="url(#ag)"/>
+    <line x1="540" y1="240" x2="635" y2="178" stroke="#1e3050" stroke-width="2" marker-end="url(#ag)"/>
+    <line x1="540" y1="380" x2="635" y2="228" stroke="#1e3050" stroke-width="2" marker-end="url(#ag)"/>
+    <!-- Labels -->
+    <text x="185" y="234" fill="#334155" font-size="7.5" text-anchor="middle">HTTPS/WSS</text>
+    <text x="500" y="478" fill="#7c3aed" font-size="7" text-anchor="middle">pub/sub fan-out</text>
+  </svg>
+
+  <!-- MINI SVG — shown for pubsub, gateway, hosting tabs -->
+  <div id="mini-svg-wrap">
+    <svg id="mini-svg" viewBox="0 0 900 400" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <marker id="ma" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#8b5cf6"/></marker>
+        <marker id="mr" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#ef4444"/></marker>
+        <marker id="mt" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#14b8a6"/></marker>
+        <marker id="mb" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#3b82f6"/></marker>
+        <filter id="gp"><feGaussianBlur stdDeviation="3" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+      </defs>
+
+      <!-- PUB/SUB DIAGRAM -->
+      <g id="mini-pubsub" display="none">
+        <text x="450" y="28" text-anchor="middle" fill="#c4b5fd" font-size="14" font-weight="700">Redis Pub/Sub — How it works</text>
+        <!-- Market Data -->
+        <rect x="20" y="130" width="130" height="55" rx="9" fill="#2d0707" stroke="#ef4444" stroke-width="1.5"/>
+        <text x="85" y="152" text-anchor="middle" fill="#fca5a5" font-size="9" font-weight="600">MARKET DATA SERVICE</text>
+        <text x="85" y="168" text-anchor="middle" fill="#fecaca" font-size="11" font-weight="700">Publisher</text>
+        <text x="85" y="180" text-anchor="middle" fill="#ef4444" font-size="8">publishes ONE message</text>
+        <!-- Redis channel bus -->
+        <rect x="260" y="80" width="170" height="160" rx="10" fill="#1a0d33" stroke="#8b5cf6" stroke-width="2"/>
+        <text x="345" y="104" text-anchor="middle" fill="#c4b5fd" font-size="9" font-weight="700">REDIS CHANNEL</text>
+        <text x="345" y="118" text-anchor="middle" fill="#a78bfa" font-size="10" font-weight="800">prices:live</text>
+        <rect x="275" y="126" width="140" height="30" rx="5" fill="#0f0a1a" stroke="#4c1d95" stroke-width="1"/>
+        <text x="345" y="145" text-anchor="middle" fill="#7c3aed" font-size="8" font-family="monospace">{"ticker":"STRC","yield":11.5}</text>
+        <text x="345" y="185" text-anchor="middle" fill="#64748b" font-size="8">All subscribers receive</text>
+        <text x="345" y="198" text-anchor="middle" fill="#64748b" font-size="8">the SAME message</text>
+        <text x="345" y="218" text-anchor="middle" fill="#a78bfa" font-size="8">No polling. Push model.</text>
+        <!-- Gateway pods -->
+        <rect x="550" y="60" width="140" height="50" rx="8" fill="#1a0d33" stroke="#8b5cf6" stroke-width="1.5"/>
+        <text x="620" y="82" text-anchor="middle" fill="#c4b5fd" font-size="9" font-weight="600">Gateway Pod 1</text>
+        <text x="620" y="97" text-anchor="middle" fill="#a78bfa" font-size="8">Sessions: A(STRC), B(STRC)</text>
+        <rect x="550" y="135" width="140" height="50" rx="8" fill="#1a0d33" stroke="#8b5cf6" stroke-width="1.5"/>
+        <text x="620" y="157" text-anchor="middle" fill="#c4b5fd" font-size="9" font-weight="600">Gateway Pod 2</text>
+        <text x="620" y="172" text-anchor="middle" fill="#a78bfa" font-size="8">Sessions: C(STRC), D(JEPI)</text>
+        <rect x="550" y="210" width="140" height="50" rx="8" fill="#1a0d33" stroke="#8b5cf6" stroke-width="1.5"/>
+        <text x="620" y="232" text-anchor="middle" fill="#c4b5fd" font-size="9" font-weight="600">Gateway Pod 3</text>
+        <text x="620" y="247" text-anchor="middle" fill="#a78bfa" font-size="8">Sessions: E(ARCC)</text>
+        <!-- Browser clients -->
+        <rect x="720" y="50" width="110" height="26" rx="6" fill="#0c2340" stroke="#3b82f6" stroke-width="1"/>
+        <text x="775" y="67" text-anchor="middle" fill="#93c5fd" font-size="8">Client A — sees STRC ✓</text>
+        <rect x="720" y="82" width="110" height="26" rx="6" fill="#0c2340" stroke="#3b82f6" stroke-width="1"/>
+        <text x="775" y="99" text-anchor="middle" fill="#93c5fd" font-size="8">Client B — sees STRC ✓</text>
+        <rect x="720" y="125" width="110" height="26" rx="6" fill="#0c2340" stroke="#3b82f6" stroke-width="1"/>
+        <text x="775" y="142" text-anchor="middle" fill="#93c5fd" font-size="8">Client C — sees STRC ✓</text>
+        <rect x="720" y="157" width="110" height="26" rx="6" fill="#0c2340" stroke="#334155" stroke-width="1"/>
+        <text x="775" y="174" text-anchor="middle" fill="#64748b" font-size="8">Client D — JEPI only ✗</text>
+        <rect x="720" y="200" width="110" height="26" rx="6" fill="#0c2340" stroke="#334155" stroke-width="1"/>
+        <text x="775" y="217" text-anchor="middle" fill="#64748b" font-size="8">Client E — ARCC only ✗</text>
+        <!-- Arrows -->
+        <line x1="150" y1="158" x2="258" y2="158" stroke="#ef4444" stroke-width="2" marker-end="url(#mr)"/>
+        <text x="204" y="150" text-anchor="middle" fill="#ef4444" font-size="8">PUBLISH</text>
+        <line x1="430" y1="130" x2="548" y2="90" stroke="#8b5cf6" stroke-width="1.5" marker-end="url(#ma)"/>
+        <line x1="430" y1="158" x2="548" y2="160" stroke="#8b5cf6" stroke-width="1.5" marker-end="url(#ma)"/>
+        <line x1="430" y1="190" x2="548" y2="228" stroke="#8b5cf6" stroke-width="1.5" marker-end="url(#ma)"/>
+        <text x="488" y="108" fill="#8b5cf6" font-size="8">SUBSCRIBE</text>
+        <line x1="690" y1="83" x2="718" y2="63" stroke="#3b82f6" stroke-width="1" marker-end="url(#mb)"/>
+        <line x1="690" y1="83" x2="718" y2="95" stroke="#3b82f6" stroke-width="1" marker-end="url(#mb)"/>
+        <line x1="690" y1="160" x2="718" y2="138" stroke="#3b82f6" stroke-width="1" marker-end="url(#mb)"/>
+        <line x1="690" y1="160" x2="718" y2="170" stroke="#3b82f6" stroke-width="1" marker-end="url(#mb)"/>
+        <line x1="690" y1="232" x2="718" y2="213" stroke="#334155" stroke-width="1"/>
+        <!-- Animated particles -->
+        <circle id="ps-pub" r="6" fill="#ef4444" filter="url(#gp)" opacity="0"/>
+        <circle id="ps-s1" r="5" fill="#8b5cf6" filter="url(#gp)" opacity="0"/>
+        <circle id="ps-s2" r="5" fill="#8b5cf6" filter="url(#gp)" opacity="0"/>
+        <circle id="ps-s3" r="5" fill="#8b5cf6" filter="url(#gp)" opacity="0"/>
+        <!-- Key insight callout -->
+        <rect x="20" y="290" width="860" height="88" rx="8" fill="#1a0d33" stroke="#4c1d95" stroke-width="1"/>
+        <text x="450" y="312" text-anchor="middle" fill="#c4b5fd" font-size="10" font-weight="700">Key Insight — Why Redis Pub/Sub solves the multi-pod problem</text>
+        <text x="450" y="332" text-anchor="middle" fill="#94a3b8" font-size="9">Without Redis: Gateway Pod 1 only knows about Sessions A &amp; B. When Market Data pushes to Pod 2, A &amp; B never get the update.</text>
+        <text x="450" y="350" text-anchor="middle" fill="#94a3b8" font-size="9">With Redis: Market Data publishes ONCE to Redis. ALL pods subscribe. Each pod fans out to its OWN sessions. Zero inter-pod coordination needed.</text>
+        <text x="450" y="368" text-anchor="middle" fill="#a78bfa" font-size="9" font-weight="600">This is the "sticky session" problem solved. You can scale to 10 Gateway pods and it still works with zero config changes.</text>
+      </g>
+
+      <!-- GATEWAY INTERNALS DIAGRAM -->
+      <g id="mini-gateway" display="none">
+        <text x="450" y="28" text-anchor="middle" fill="#93c5fd" font-size="14" font-weight="700">Gateway Internals — Filter Chain + WebSocket Handler</text>
+        <!-- HTTP Filter chain (left side) -->
+        <text x="200" y="55" text-anchor="middle" fill="#64748b" font-size="9" font-weight="600">HTTP REQUEST PATH</text>
+        <rect x="60" y="62" width="280" height="30" rx="7" fill="#0c2340" stroke="#3b82f6" stroke-width="1.5"/>
+        <text x="200" y="81" text-anchor="middle" fill="#bfdbfe" font-size="9">Incoming HTTP Request</text>
+        <line x1="200" y1="92" x2="200" y2="108" stroke="#334155" stroke-width="1.5" marker-end="url(#mb)"/>
+        <rect x="80" y="108" width="240" height="30" rx="7" fill="#0f1930" stroke="#334155" stroke-width="1"/>
+        <text x="200" y="127" text-anchor="middle" fill="#94a3b8" font-size="8.5">① CORS Filter — add headers</text>
+        <line x1="200" y1="138" x2="200" y2="152" stroke="#334155" stroke-width="1.5" marker-end="url(#mb)"/>
+        <rect x="80" y="152" width="240" height="30" rx="7" fill="#0f1930" stroke="#8b5cf6" stroke-width="1.5"/>
+        <text x="200" y="171" text-anchor="middle" fill="#ddd6fe" font-size="8.5">② JWT Auth Filter — verify RS256</text>
+        <line x1="200" y1="182" x2="140" y2="182" stroke="#ef4444" stroke-width="1" stroke-dasharray="3 2"/>
+        <text x="110" y="178" fill="#ef4444" font-size="7.5" text-anchor="middle">401 if</text>
+        <text x="110" y="188" fill="#ef4444" font-size="7.5" text-anchor="middle">invalid</text>
+        <line x1="200" y1="182" x2="200" y2="196" stroke="#334155" stroke-width="1.5" marker-end="url(#mb)"/>
+        <rect x="80" y="196" width="240" height="30" rx="7" fill="#0f1930" stroke="#f59e0b" stroke-width="1.5"/>
+        <text x="200" y="215" text-anchor="middle" fill="#fde68a" font-size="8.5">③ Rate Limiter — Redis counter</text>
+        <line x1="200" y1="226" x2="260" y2="226" stroke="#ef4444" stroke-width="1" stroke-dasharray="3 2"/>
+        <text x="290" y="222" fill="#ef4444" font-size="7.5">429 if</text>
+        <text x="290" y="232" fill="#ef4444" font-size="7.5">exceeded</text>
+        <line x1="200" y1="226" x2="200" y2="240" stroke="#334155" stroke-width="1.5" marker-end="url(#mb)"/>
+        <rect x="80" y="240" width="240" height="30" rx="7" fill="#0f1930" stroke="#10b981" stroke-width="1.5"/>
+        <text x="200" y="259" text-anchor="middle" fill="#a7f3d0" font-size="8.5">④ Route Matcher — which service?</text>
+        <line x1="200" y1="270" x2="200" y2="284" stroke="#334155" stroke-width="1.5" marker-end="url(#mb)"/>
+        <rect x="80" y="284" width="240" height="30" rx="7" fill="#0f1930" stroke="#34d399" stroke-width="1"/>
+        <text x="200" y="303" text-anchor="middle" fill="#6ee7b7" font-size="8.5">⑤ Proxy → auth/portfolio/market</text>
+        <!-- WS path (right side) -->
+        <text x="650" y="55" text-anchor="middle" fill="#64748b" font-size="9" font-weight="600">WEBSOCKET PATH  (order=-1, runs BEFORE SCG routing)</text>
+        <rect x="510" y="62" width="280" height="30" rx="7" fill="#1a0d4e" stroke="#8b5cf6" stroke-width="1.5"/>
+        <text x="650" y="81" text-anchor="middle" fill="#ddd6fe" font-size="9">WS Upgrade Request  /ws?tickers=STRC</text>
+        <line x1="650" y1="92" x2="650" y2="108" stroke="#8b5cf6" stroke-width="1.5" marker-end="url(#ma)"/>
+        <rect x="530" y="108" width="240" height="30" rx="7" fill="#1a0d4e" stroke="#4c1d95" stroke-width="1.5"/>
+        <text x="650" y="127" text-anchor="middle" fill="#c4b5fd" font-size="8.5">WebSocketConfig (order=-1)</text>
+        <text x="510" y="146" fill="#64748b" font-size="7.5">intercepts BEFORE Spring Cloud Gateway</text>
+        <line x1="650" y1="138" x2="650" y2="152" stroke="#8b5cf6" stroke-width="1.5" marker-end="url(#ma)"/>
+        <rect x="530" y="152" width="240" height="36" rx="7" fill="#1a0d4e" stroke="#8b5cf6" stroke-width="2"/>
+        <text x="650" y="171" text-anchor="middle" fill="#e2e8f0" font-size="9" font-weight="700">PriceFanOutHandler</text>
+        <text x="650" y="183" text-anchor="middle" fill="#a78bfa" font-size="7.5">registers session · handles SUBSCRIBE</text>
+        <line x1="650" y1="188" x2="650" y2="202" stroke="#8b5cf6" stroke-width="1.5" marker-end="url(#ma)"/>
+        <rect x="530" y="202" width="240" height="30" rx="7" fill="#0f0a1a" stroke="#4c1d95" stroke-width="1.5"/>
+        <text x="650" y="221" text-anchor="middle" fill="#c4b5fd" font-size="8.5">SessionRegistry</text>
+        <text x="615" y="240" fill="#4c1d95" font-size="7.5">"STRC" → {sessionA, sessionB}</text>
+        <!-- Redis subscriber box at bottom -->
+        <line x1="650" y1="232" x2="650" y2="248" stroke="#8b5cf6" stroke-width="1.5" stroke-dasharray="4 2"/>
+        <rect x="530" y="248" width="240" height="30" rx="7" fill="#1a0d33" stroke="#8b5cf6" stroke-width="1.5"/>
+        <text x="650" y="268" text-anchor="middle" fill="#c4b5fd" font-size="8.5">RedisSubscriberConfig</text>
+        <line x1="650" y1="278" x2="650" y2="292" stroke="#ef4444" stroke-width="1.5" marker-end="url(#mr)"/>
+        <rect x="530" y="292" width="240" height="28" rx="7" fill="#3d0000" stroke="#dc2626" stroke-width="1.5"/>
+        <text x="650" y="310" text-anchor="middle" fill="#fca5a5" font-size="8.5">Redis channel: prices:live</text>
+        <!-- Callout box -->
+        <rect x="20" y="325" width="860" height="55" rx="8" fill="#0c2340" stroke="#1e3050" stroke-width="1"/>
+        <text x="450" y="346" text-anchor="middle" fill="#93c5fd" font-size="9" font-weight="700">Why order=-1 is critical</text>
+        <text x="450" y="362" text-anchor="middle" fill="#94a3b8" font-size="8.5">Spring Cloud Gateway intercepts ALL requests. Without order=-1, /ws would be proxied to a backend instead of handled by PriceFanOutHandler.</text>
+        <text x="450" y="376" text-anchor="middle" fill="#60a5fa" font-size="8.5">order=-1 makes WebSocketConfig run before SCG RoutePredicateHandlerMapping (order=1). So /ws is ours, not SCG's.</text>
+      </g>
+
+      <!-- FREE HOSTING DIAGRAM -->
+      <g id="mini-hosting" display="none">
+        <text x="450" y="25" text-anchor="middle" fill="#5eead4" font-size="14" font-weight="700">Hosting Stack — Free vs AWS</text>
+        <!-- AWS Column -->
+        <text x="200" y="50" text-anchor="middle" fill="#94a3b8" font-size="10" font-weight="700">Current (AWS)</text>
+        <text x="200" y="64" text-anchor="middle" fill="#ef4444" font-size="9">~$40-75/month after free tier</text>
+        <rect x="50" y="72" width="300" height="26" rx="6" fill="#1e293b" stroke="#334155" stroke-width="1"/>
+        <text x="200" y="89" text-anchor="middle" fill="#94a3b8" font-size="8.5">Route53 + CloudFront + ACM (DNS/CDN)</text>
+        <rect x="50" y="104" width="300" height="26" rx="6" fill="#1e293b" stroke="#334155" stroke-width="1"/>
+        <text x="200" y="121" text-anchor="middle" fill="#94a3b8" font-size="8.5">ECS Fargate × 4 services (~$15-30/mo)</text>
+        <rect x="50" y="136" width="300" height="26" rx="6" fill="#1e293b" stroke="#ef4444" stroke-width="1"/>
+        <text x="200" y="153" text-anchor="middle" fill="#fca5a5" font-size="8.5">RDS PostgreSQL × 3 ($45-75/mo after free)</text>
+        <text x="200" y="164" text-anchor="middle" fill="#ef4444" font-size="7">⚠ This is the killer — 3 instances</text>
+        <rect x="50" y="172" width="300" height="26" rx="6" fill="#1e293b" stroke="#334155" stroke-width="1"/>
+        <text x="200" y="189" text-anchor="middle" fill="#94a3b8" font-size="8.5">ElastiCache Redis (~$13/mo)</text>
+        <rect x="50" y="204" width="300" height="26" rx="6" fill="#1e293b" stroke="#334155" stroke-width="1"/>
+        <text x="200" y="221" text-anchor="middle" fill="#94a3b8" font-size="8.5">ALB Load Balancer (~$16/mo)</text>
+        <!-- Free Column -->
+        <text x="670" y="50" text-anchor="middle" fill="#5eead4" font-size="10" font-weight="700">Recommended (Free Stack)</text>
+        <text x="670" y="64" text-anchor="middle" fill="#4ade80" font-size="9">$0-5/month</text>
+        <rect x="520" y="72" width="300" height="26" rx="6" fill="#031a19" stroke="#14b8a6" stroke-width="1.5"/>
+        <text x="670" y="89" text-anchor="middle" fill="#5eead4" font-size="8.5">Vercel — Frontend (Free · 100GB bandwidth)</text>
+        <rect x="520" y="104" width="300" height="26" rx="6" fill="#031a19" stroke="#14b8a6" stroke-width="1.5"/>
+        <text x="670" y="121" text-anchor="middle" fill="#5eead4" font-size="8.5">Railway — 4 Java services ($5/mo hobby)</text>
+        <rect x="520" y="136" width="300" height="26" rx="6" fill="#031a19" stroke="#14b8a6" stroke-width="1.5"/>
+        <text x="670" y="153" text-anchor="middle" fill="#5eead4" font-size="8.5">Supabase — 1 PostgreSQL · 3 schemas (Free)</text>
+        <text x="670" y="164" text-anchor="middle" fill="#4ade80" font-size="7">✓ 500MB · connection pooling · no expiry</text>
+        <rect x="520" y="172" width="300" height="26" rx="6" fill="#031a19" stroke="#14b8a6" stroke-width="1.5"/>
+        <text x="670" y="189" text-anchor="middle" fill="#5eead4" font-size="8.5">Upstash — Redis serverless (Free)</text>
+        <text x="670" y="200" text-anchor="middle" fill="#4ade80" font-size="7">✓ 10k commands/day · supports Pub/Sub</text>
+        <rect x="520" y="208" width="300" height="26" rx="6" fill="#031a19" stroke="#14b8a6" stroke-width="1.5"/>
+        <text x="670" y="225" text-anchor="middle" fill="#5eead4" font-size="8.5">GitHub Actions — CI/CD (Free · 2000 min/mo)</text>
+        <!-- VS divider -->
+        <line x1="450" y1="50" x2="450" y2="235" stroke="#1e3050" stroke-width="1.5" stroke-dasharray="5 4"/>
+        <rect x="422" y="132" width="56" height="24" rx="12" fill="#1e293b" stroke="#334155" stroke-width="1"/>
+        <text x="450" y="148" text-anchor="middle" fill="#64748b" font-size="10" font-weight="700">VS</text>
+        <!-- Cost comparison -->
+        <rect x="20" y="248" width="860" height="130" rx="8" fill="#031a19" stroke="#14b8a6" stroke-width="1"/>
+        <text x="450" y="270" text-anchor="middle" fill="#5eead4" font-size="10" font-weight="700">Migration Path (5 steps)</text>
+        <text x="60" y="292" fill="#94a3b8" font-size="8.5">①</text><text x="76" y="292" fill="#5eead4" font-size="8.5" font-weight="600">Register:</text><text x="130" y="292" fill="#94a3b8" font-size="8.5">vercel.com · railway.app · supabase.com · upstash.com — all free tier, no credit card for basics</text>
+        <text x="60" y="310" fill="#94a3b8" font-size="8.5">②</text><text x="76" y="310" fill="#5eead4" font-size="8.5" font-weight="600">Supabase DB:</text><text x="152" y="310" fill="#94a3b8" font-size="8.5">Create project → copy connection string → add ?currentSchema=auth|portfolio|market to each service</text>
+        <text x="60" y="328" fill="#94a3b8" font-size="8.5">③</text><text x="76" y="328" fill="#5eead4" font-size="8.5" font-weight="600">Upstash Redis:</text><text x="152" y="328" fill="#94a3b8" font-size="8.5">Create database → copy REDIS_URL → paste into Railway env vars</text>
+        <text x="60" y="346" fill="#94a3b8" font-size="8.5">④</text><text x="76" y="346" fill="#5eead4" font-size="8.5" font-weight="600">Railway deploy:</text><text x="152" y="346" fill="#94a3b8" font-size="8.5">Connect GitHub → Railway detects Dockerfiles → one click deploy per service → set env vars</text>
+        <text x="60" y="364" fill="#94a3b8" font-size="8.5">⑤</text><text x="76" y="364" fill="#5eead4" font-size="8.5" font-weight="600">Vercel frontend:</text><text x="152" y="364" fill="#94a3b8" font-size="8.5">Connect GitHub → auto-deploys on push → set NEXT_PUBLIC_API_URL to Railway gateway URL</text>
+      </g>
+    </svg>
+  </div>
+</div>
+
+<!-- RIGHT PANEL -->
+<div id="panel">
+
+  <!-- OVERVIEW -->
+  <div class="flow-info active" id="info-overview">
+    <div class="flow-title" style="color:#93c5fd">System Overview</div>
+    <div class="flow-desc">All-Java backend. <strong>Single PostgreSQL</strong> with 3 schemas (auth/portfolio/market). Redis as shared pub/sub bus. Spring Cloud Gateway handles routing, JWT, rate limiting, and WebSocket fan-out.</div>
+    <div class="steps">
+      <div class="step active" style="--fc:#8b5cf6"><span class="step-num">①</span><span class="step-text"><strong>Spring Cloud Gateway (:3000)</strong> — JWT validation (no network call), rate limiting, proxy, WS fan-out.</span></div>
+      <div class="step active" style="--fc:#10b981"><span class="step-num">②</span><span class="step-text"><strong>Auth Service (:8081)</strong> — only service with RSA private key. Signs JWTs. All others only verify.</span></div>
+      <div class="step active" style="--fc:#f59e0b"><span class="step-num">③</span><span class="step-text"><strong>Portfolio Service (:8082)</strong> — Holdings CRUD. Reads Redis for live prices (avoids HTTP hop).</span></div>
+      <div class="step active" style="--fc:#ef4444"><span class="step-num">④</span><span class="step-text"><strong>Market Data (:8083)</strong> — scrapes Yahoo/Finnhub every 60s. Circuit breaker. Publishes to Redis pub/sub.</span></div>
+      <div class="step active" style="--fc:#6366f1"><span class="step-num">⑤</span><span class="step-text"><strong>Single PostgreSQL</strong> — 3 schemas (auth/portfolio/market). Each service has its own Flyway history. No cross-schema joins in code.</span></div>
+      <div class="step active" style="--fc:#dc2626"><span class="step-num">⑥</span><span class="step-text"><strong>Redis</strong> — price cache (TTL 90s), <code>prices:live</code> pub/sub, rate limit counters.</span></div>
+    </div>
+    <div class="click-hint">Click any box · Scroll for legend</div>
+    <div class="legend"><h2>Legend</h2><div class="legend-items"><div class="legend-item"><div class="legend-dot" style="background:#3b82f6"></div>Browser</div><div class="legend-item"><div class="legend-dot" style="background:#8b5cf6"></div>Gateway</div><div class="legend-item"><div class="legend-dot" style="background:#10b981"></div>Auth</div><div class="legend-item"><div class="legend-dot" style="background:#f59e0b"></div>Portfolio</div><div class="legend-item"><div class="legend-dot" style="background:#ef4444"></div>Market Data</div><div class="legend-item"><div class="legend-dot" style="background:#6366f1"></div>PostgreSQL (1 DB)</div><div class="legend-item"><div class="legend-dot" style="background:#dc2626"></div>Redis</div></div></div>
+  </div>
+
+  <!-- LOGIN -->
+  <div class="flow-info" id="info-login">
+    <div class="flow-title" style="color:#10b981">Login Flow</div>
+    <div class="flow-desc">Only <strong>auth-service</strong> ever touches the RSA private key. Gateway proxies public routes without checking JWT.</div>
+    <div class="steps" id="steps-login">
+      <div class="step" style="--fc:#10b981"><span class="step-num">1</span><span class="step-text">Browser: <code>POST /v1/auth/login {email, password}</code></span></div>
+      <div class="step" style="--fc:#10b981"><span class="step-num">2</span><span class="step-text">Gateway: public route → skip JWT filter → proxy to <code>auth-service:8081</code></span></div>
+      <div class="step" style="--fc:#10b981"><span class="step-num">3</span><span class="step-text">Auth Service: loads user from <code>auth schema</code>. Runs BCrypt verify (cost=12).</span></div>
+      <div class="step" style="--fc:#10b981"><span class="step-num">4</span><span class="step-text">Signs JWT with <strong>RSA private key</strong>. Saves SHA-256(refreshToken) to DB.</span></div>
+      <div class="step" style="--fc:#10b981"><span class="step-num">5</span><span class="step-text"><code>accessToken</code> (15 min) in body + <code>refreshToken</code> in httpOnly cookie.</span></div>
+      <div class="step" style="--fc:#10b981"><span class="step-num">6</span><span class="step-text">Browser stores <code>accessToken</code> in <strong>JS memory only</strong> — never localStorage.</span></div>
+    </div>
+  </div>
+
+  <!-- ADD HOLDING -->
+  <div class="flow-info" id="info-holding">
+    <div class="flow-title" style="color:#f59e0b">Add Holding Flow</div>
+    <div class="flow-desc">Gateway validates JWT <strong>locally</strong> (no auth-service call). Portfolio reads price from <strong>Redis</strong> — no market-service HTTP call. Two hops avoided.</div>
+    <div class="steps" id="steps-holding">
+      <div class="step" style="--fc:#f59e0b"><span class="step-num">1</span><span class="step-text">Browser: <code>POST /v1/portfolio/holdings {ticker:"STRC", amount:150000}</code> + JWT</span></div>
+      <div class="step" style="--fc:#f59e0b"><span class="step-num">2</span><span class="step-text">Gateway: verifies RS256 JWT with <strong>public key only</strong> — no network call to auth-service.</span></div>
+      <div class="step" style="--fc:#f59e0b"><span class="step-num">3</span><span class="step-text">Portfolio Service: saves to <code>portfolio schema</code>. <code>user_id</code> is VARCHAR — no FK to auth schema.</span></div>
+      <div class="step" style="--fc:#f59e0b"><span class="step-num">4</span><span class="step-text">Reads <code>stock:price:STRC</code> from Redis (TTL 90s). If miss → HTTP fallback to market-service.</span></div>
+      <div class="step" style="--fc:#f59e0b"><span class="step-num">5</span><span class="step-text">Returns <code>{holdingId, ticker:"STRC", monthlyIncome:1437.50}</code></span></div>
+    </div>
+  </div>
+
+  <!-- LIVE PRICES -->
+  <div class="flow-info" id="info-prices">
+    <div class="flow-title" style="color:#ef4444">Live Prices (WebSocket)</div>
+    <div class="flow-desc">Background scrape → Redis cache → Pub/Sub publish → Gateway fan-out. See <strong>Pub/Sub Deep Dive</strong> tab for the full visual.</div>
+    <div class="steps" id="steps-prices">
+      <div class="step" style="--fc:#ef4444"><span class="step-num">1</span><span class="step-text"><code>@Scheduled PriceUpdateJob</code> fires every 60s.</span></div>
+      <div class="step" style="--fc:#ef4444"><span class="step-num">2</span><span class="step-text"><code>YahooFinanceScraper.scrape("STRC")</code> — Jsoup + Resilience4j circuit breaker.</span></div>
+      <div class="step" style="--fc:#ef4444"><span class="step-num">3</span><span class="step-text">Cache in Redis: <code>stock:price:STRC → {yield:11.5, price:99.8}</code> TTL=90s.</span></div>
+      <div class="step" style="--fc:#ef4444"><span class="step-num">4</span><span class="step-text">Publish ONE message to Redis channel <code>prices:live</code>.</span></div>
+      <div class="step" style="--fc:#a855f7"><span class="step-num">5</span><span class="step-text"><code>RedisSubscriberConfig</code> in Gateway receives it (<code>ReactiveRedisMessageListenerContainer</code>).</span></div>
+      <div class="step" style="--fc:#a855f7"><span class="step-num">6</span><span class="step-text"><code>PriceFanOutHandler.fanOut("STRC", json)</code> → sends to ALL WS sessions watching STRC.</span></div>
+      <div class="step" style="--fc:#a855f7"><span class="step-num">7</span><span class="step-text"><code>LivePriceBadge.tsx</code> re-renders. No page refresh.</span></div>
+    </div>
+  </div>
+
+  <!-- PUB/SUB DEEP DIVE -->
+  <div class="flow-info" id="info-pubsub">
+    <div class="flow-title" style="color:#c4b5fd">Pub/Sub Deep Dive</div>
+    <div class="flow-desc"><strong>Pub/Sub = Push model.</strong> Publisher fires once. All subscribers receive it. No polling. Think of Java's <code>@EventListener</code> but distributed across processes and pods.</div>
+    <div class="info-card purple">
+      <h3>Normal Redis (GET/SET) vs Pub/Sub</h3>
+      <p><strong>GET/SET:</strong> You ask, Redis answers. Request/response. One-to-one.</p>
+      <p><strong>Pub/Sub:</strong> Publisher fires, Redis delivers to ALL subscribers simultaneously. Push. One-to-many. Subscriber never polls.</p>
+    </div>
+    <div class="info-card red">
+      <h3>Why not just poll from the browser?</h3>
+      <p>100 users, 9 tickers = 100 × every 5s = 1,200 req/min just for prices. With pub/sub: Market Data publishes 9 messages/60s = 9 req/min. 133× fewer requests.</p>
+    </div>
+    <div class="info-card purple">
+      <h3>The code (already written for you)</h3>
+      <div class="code-block"><span class="cm">// Market Data — PricePublisher.java</span>
+redisTemplate.convertAndSend(<span class="str">"prices:live"</span>, json);
+
+<span class="cm">// Gateway — RedisSubscriberConfig.java</span>
+container.receive(ChannelTopic.of(<span class="str">"prices:live"</span>))
+  .map(msg -> msg.getMessage())
+  .flatMap(json -> fanOutHandler.fanOut(ticker, json))
+  .retry()  <span class="cm">// re-subscribe if Redis drops</span>
+  .subscribe();</div>
+    </div>
+    <div class="info-card purple">
+      <h3>Challenge: Redis restarts lose subscriptions</h3>
+      <p>If Redis goes down and comes back, the subscription is gone. The <code>.retry()</code> operator automatically re-subscribes. Always add it.</p>
+    </div>
+  </div>
+
+  <!-- GATEWAY INTERNALS -->
+  <div class="flow-info" id="info-gateway">
+    <div class="flow-title" style="color:#93c5fd">Gateway Internals</div>
+    <div class="flow-desc">Spring Cloud Gateway is <strong>reactive (WebFlux)</strong> — non-blocking. Every request passes through a filter chain before being proxied.</div>
+    <div class="info-card blue">
+      <h3>SCG can proxy WS — but NOT fan-out</h3>
+      <p>SCG can transparently forward <code>ws://</code> to ONE backend. But for fan-out (1 Redis message → N browser sessions), you need a <strong>custom WebSocketHandler</strong>. That's <code>PriceFanOutHandler</code>.</p>
+    </div>
+    <div class="info-card blue">
+      <h3>The order=-1 trick</h3>
+      <p>Without it, SCG intercepts <code>/ws</code> and tries to proxy it. We register our <code>WebSocketConfig</code> at <code>order=-1</code> so it runs first. SCG's routes sit at <code>order=1</code>.</p>
+      <div class="code-block"><span class="ann">@Bean</span>
+HandlerMapping webSocketHandlerMapping() {
+  SimpleUrlHandlerMapping m = <span class="kw">new</span> SimpleUrlHandlerMapping();
+  m.setUrlMap(Map.of(<span class="str">"/ws"</span>, handler));
+  m.setOrder(<span class="kw">-1</span>); <span class="cm">// before SCG</span>
+  <span class="kw">return</span> m;
+}</div>
+    </div>
+    <div class="info-card blue">
+      <h3>Reactive challenge — never block</h3>
+      <p>In WebFlux you cannot call <code>session.send().block()</code>. You must compose Mono/Flux chains. The fan-out uses <code>Flux.fromIterable(sessions).flatMap(...)</code> — non-blocking, concurrent sends.</p>
+    </div>
+    <div class="info-card blue">
+      <h3>Stale session cleanup</h3>
+      <p>When a browser tab crashes, no clean WS close is sent. The session stays in <code>SessionRegistry</code> until the next <code>fanOut()</code> call catches the send error and calls <code>registry.deregister()</code>. Lazy but effective at MVP scale.</p>
+    </div>
+  </div>
+
+  <!-- FREE HOSTING -->
+  <div class="flow-info" id="info-hosting">
+    <div class="flow-title" style="color:#5eead4">Free Hosting Stack</div>
+    <div class="flow-desc">AWS is great but expensive after free tier. For 10 users/day, this free stack handles everything and costs <strong>$0-5/month</strong> vs AWS $40-75/month.</div>
+    <div class="info-card teal"><h3>Vercel — Frontend (Free)</h3><p>Same company as Next.js. Auto-deploys from GitHub on push. Edge CDN. 100GB bandwidth/mo. Zero config for Next.js. Custom domain free.</p></div>
+    <div class="info-card teal"><h3>Railway — Java Services ($5/mo hobby)</h3><p>Connect GitHub → detects Dockerfiles → one-click deploy. Private networking between services (internal URLs). Env vars in UI. Auto-restarts crashed services. $5/mo covers all 4 services at MVP scale.</p><div class="code-block"><span class="cm"># Railway private URLs (no public exposure)</span>
+AUTH_SERVICE_URL=http://auth-service.railway.internal:8081
+PORTFOLIO_SERVICE_URL=http://portfolio.railway.internal:8082</div></div>
+    <div class="info-card teal"><h3>Supabase — PostgreSQL (Free)</h3><p>500MB, free forever (no 90-day expiry). Built-in PgBouncer connection pooling. Copy the connection string, append <code>?currentSchema=auth</code> per service. Note: auto-pauses after 7 days of inactivity — add a weekly cron ping.</p></div>
+    <div class="info-card teal"><h3>Upstash — Redis (Free)</h3><p>10,000 commands/day free. Supports pub/sub. Serverless — you pay per command after free tier. At 60s scrape interval = ~1,440 scrapes/day × a few commands each = well under limit for MVP.</p></div>
+    <div class="info-card green"><h3>When to move to AWS</h3><p>Move when: >500 users/day OR pub/sub hits Upstash limit OR Railway CPU/RAM consistently maxed. AWS migration is one env-var change per service — all the code stays identical.</p></div>
+  </div>
+
+  <!-- CHALLENGES FIXED -->
+  <div class="flow-info" id="info-challenges">
+    <div class="flow-title" style="color:#f97316">Challenges — Status</div>
+    <div class="flow-desc">All critical items resolved. Here's what changed and why.</div>
+    <div class="info-card green"><h3>✓ Docker healthchecks</h3><p><code>pg_isready</code> on all DBs. <code>redis-cli ping</code> on Redis. <code>condition: service_healthy</code> on all depends_on. Spring Boot now starts only after DB is truly ready.</p></div>
+    <div class="info-card green"><h3>✓ Single PostgreSQL (3 schemas)</h3><p>Dropped 2 DB containers. One <code>divtrack</code> DB with <code>auth</code>, <code>portfolio</code>, <code>market</code> schemas. Each service sets <code>currentSchema=X</code> in connection URL. Flyway owns its own schema history per service. init-schemas.sql creates schemas on first boot.</p></div>
+    <div class="info-card green"><h3>✓ WebSocket fan-out implemented</h3><p>4 new files written: <code>SessionRegistry</code>, <code>PriceFanOutHandler</code>, <code>WebSocketConfig</code>, <code>RedisSubscriberConfig</code>. Gateway is now a full WS server with Redis pub/sub fan-out. Sessions are thread-safe (ConcurrentHashMap + CopyOnWriteArraySet). Stale sessions cleaned on send error.</p></div>
+    <div class="info-card green"><h3>✓ JVM memory limits</h3><p><code>JAVA_TOOL_OPTIONS: -Xmx384m -Xms128m -XX:+UseContainerSupport</code> on all 4 services. Total: ~1.5GB. Use t3.small (2GB) on AWS or Railway's 512MB containers.</p></div>
+    <div class="info-card amber"><h3>⚠ Yahoo Finance (still open)</h3><p>Swap <code>YahooFinanceScraper</code> for Finnhub.io free API. The <code>MarketDataProvider</code> interface means: write <code>FinnhubScraper implements MarketDataProvider</code>, swap the Spring bean. Zero other changes.</p></div>
+    <div class="info-card amber"><h3>⚠ Redis SPOF (partially mitigated)</h3><p>Portfolio service now falls back to HTTP if Redis miss. Gateway's <code>.retry()</code> auto-resubscribes. Rate limiter fails open. For production: use Upstash (managed, replicated).</p></div>
+  </div>
+</div>
+</main>
+
+<div id="drawer">
+  <button id="drawer-close">✕</button>
+  <h3 id="drawer-title"></h3>
+  <div class="drawer-grid" id="drawer-body"></div>
+</div>
+
+<script>
+const svcDetails = {
+  browser:   {title:'Browser — Next.js 14', color:'#3b82f6', items:[{l:'Framework',v:'Next.js 14 App Router'},{l:'Token storage',v:'JS memory only — never localStorage'},{l:'WS hook',v:'useWebSocket.ts — auto-reconnect'},{l:'HTTP client',v:'Axios with JWT interceptor'},{l:'Port',v:'3001'}]},
+  gateway:   {title:'API Gateway — Spring Cloud Gateway', color:'#8b5cf6', items:[{l:'Runtime',v:'Reactive — WebFlux (non-blocking)'},{l:'JWT',v:'RS256 public key only — no auth call'},{l:'Rate limit',v:'Redis-backed RequestRateLimiter'},{l:'WS handler',v:'PriceFanOutHandler (custom, order=-1)'},{l:'Redis sub',v:'ReactiveRedisMessageListenerContainer'},{l:'Port',v:'3000'}]},
+  auth:      {title:'Auth Service — Spring Boot 3', color:'#10b981', items:[{l:'JWT',v:'RS256 — ONLY service with private key'},{l:'Password',v:'BCrypt cost=12'},{l:'IDs',v:'ULID (26 chars, sortable)'},{l:'Schema',v:'auth (Flyway manages auth.flyway_schema_history)'},{l:'Port',v:'8081'}]},
+  portfolio: {title:'Portfolio Service — Spring Boot 3', color:'#f59e0b', items:[{l:'JWT',v:'RS256 public key only'},{l:'user_id',v:'VARCHAR — NO FK to auth schema'},{l:'Price lookup',v:'Redis first → HTTP fallback'},{l:'Schema',v:'portfolio'},{l:'Port',v:'8082'}]},
+  market:    {title:'Market Data Service — Spring Boot 3', color:'#ef4444', items:[{l:'Scraper',v:'YahooFinanceScraper implements MarketDataProvider'},{l:'Circuit breaker',v:'Resilience4j — opens after 3 failures'},{l:'Redis cache',v:'stock:price:{ticker} TTL=90s'},{l:'Pub/Sub',v:'Publishes to prices:live after each scrape'},{l:'Schema',v:'market'},{l:'Port',v:'8083'}]},
+  singledb:  {title:'Single PostgreSQL — 3 Schemas', color:'#6366f1', items:[{l:'DB name',v:'divtrack'},{l:'Schema: auth',v:'users, refresh_tokens'},{l:'Schema: portfolio',v:'holdings, alerts'},{l:'Schema: market',v:'stocks, price_history'},{l:'Flyway',v:'Each service owns its own schema history'},{l:'init-schemas.sql',v:'Creates schemas on first boot via initdb'}]},
+  redis:     {title:'Redis 7 — Cache + Pub/Sub + Rate Limit', color:'#dc2626', items:[{l:'Price cache',v:'stock:price:{ticker} TTL=90s'},{l:'Pub/Sub ch',v:'prices:live — market → gateway'},{l:'Rate limit',v:'ratelimit:{ip}:{route} counter TTL=60s'},{l:'SPOF risk',v:'⚠ Add fallbacks in all services'},{l:'Free option',v:'Upstash.com — 10k cmd/day free'}]},
+};
+
+const tabs = document.querySelectorAll('.tab');
+const infos = document.querySelectorAll('.flow-info');
+const archSvg = document.getElementById('arch-svg');
+const miniWrap = document.getElementById('mini-svg-wrap');
+const MINI_TABS = {pubsub:'mini-pubsub', gateway:'mini-gateway', hosting:'mini-hosting'};
+const FLOW_LINES = {login:'fll', holding:'fhl', prices:'fpl'};
+let animHandle = null, current = 'overview';
+
+tabs.forEach(tab => {
+  tab.addEventListener('click', () => {
+    tabs.forEach(t => t.classList.remove('active'));
+    tab.classList.add('active');
+    infos.forEach(d => d.classList.remove('active'));
+    document.getElementById('info-' + tab.dataset.flow).classList.add('active');
+
+    Object.values(FLOW_LINES).forEach(id => {const e=document.getElementById(id);if(e)e.setAttribute('opacity','0');});
+    if(animHandle){cancelAnimationFrame(animHandle);animHandle=null;}
+    stopParticles();
+    stopMiniAnim();
+
+    current = tab.dataset.flow;
+
+    // Switch between main arch SVG and mini SVG
+    const miniId = MINI_TABS[current];
+    if(miniId){
+      archSvg.style.display='none';
+      miniWrap.style.display='flex';
+      document.querySelectorAll('#mini-svg > g').forEach(g=>g.setAttribute('display','none'));
+      const mini = document.getElementById(miniId);
+      if(mini) mini.setAttribute('display','block');
+      if(current==='pubsub') startPubSubAnim();
+    } else {
+      archSvg.style.display='';
+      miniWrap.style.display='none';
+      const lineId = FLOW_LINES[current];
+      if(lineId){const e=document.getElementById(lineId);if(e)e.setAttribute('opacity','1');}
+      if(['login','holding','prices'].includes(current)) startFlow(current);
+    }
+  });
+});
+
+// ── Particle system (main arch SVG) ─────────────────────────────
+const FLOWS = {
+  login:   {ids:['p-login'],   paths:[[{x:20,y:240},{x:145,y:240},{x:225,y:240},{x:290,y:240},{x:290,y:100},{x:410,y:100},{x:475,y:100},{x:635,y:120}]], steps:'steps-login',  dur:2800},
+  holding: {ids:['p-holding'], paths:[[{x:20,y:240},{x:145,y:240},{x:225,y:240},{x:290,y:240},{x:410,y:240},{x:540,y:240},{x:635,y:178}]], steps:'steps-holding', dur:2600},
+  prices:  {ids:['p-pa','p-pb'],paths:[[{x:475,y:472},{x:475,y:408},{x:475,y:380},{x:540,y:392},{x:660,y:415}],[{x:660,y:430},{x:500,y:490},{x:340,y:490},{x:290,y:265},{x:290,y:240},{x:145,y:240},{x:20,y:240}]], steps:'steps-prices', dur:3200, stagger:120},
+};
+let particles=[];
+function lerp(a,b,t){return a+(b-a)*t;}
+class Particle{constructor(id,pts,delay,dur){this.el=document.getElementById(id);this.pts=pts;this.delay=delay;this.dur=dur;this.start=null;this.done=false;}update(now){if(!this.start)this.start=now;const e=now-this.start-this.delay;if(e<0){this.el.setAttribute('opacity','0');return;}const t=Math.min(e/this.dur,1);const i=Math.floor(t*(this.pts.length-1));const lt=(t*(this.pts.length-1))-i;const a=this.pts[Math.min(i,this.pts.length-1)];const b=this.pts[Math.min(i+1,this.pts.length-1)];this.el.setAttribute('cx',lerp(a.x,b.x,lt).toFixed(1));this.el.setAttribute('cy',lerp(a.y,b.y,lt).toFixed(1));this.el.setAttribute('opacity',t>=1?'0':'1');if(t>=1)this.done=true;}}
+function stopParticles(){['p-login','p-holding','p-pa','p-pb'].forEach(id=>{const e=document.getElementById(id);if(e)e.setAttribute('opacity','0');});particles=[];document.querySelectorAll('.step').forEach(s=>s.classList.remove('active','done'));}
+function buildP(name){const f=FLOWS[name];particles=f.paths.map((pts,i)=>new Particle(f.ids[i],pts,(f.stagger||0)*i,f.dur));}
+function updateSteps(sid,prog){if(!sid)return;const ss=document.querySelectorAll('#'+sid+' .step');const a=Math.floor(prog*ss.length);ss.forEach((s,i)=>{s.classList.remove('active','done');if(i<a)s.classList.add('done');else if(i===a)s.classList.add('active');});}
+function startFlow(name){stopParticles();const f=FLOWS[name];if(!f)return;buildP(name);let ls=null;function tick(now){if(!ls)ls=now;const e=now-ls-(particles[0]?.delay||0);updateSteps(f.steps,Math.max(0,Math.min(1,e/f.dur)));particles.forEach(p=>p.update(now));if(particles.every(p=>p.done)){ls=null;buildP(name);}animHandle=requestAnimationFrame(tick);}animHandle=requestAnimationFrame(tick);}
+
+// ── Pub/Sub mini animation ────────────────────────────────────
+let miniAnimHandle=null;
+const PS_PUB={el:null,pts:[{x:85,y:158},{x:200,y:158},{x:260,y:158}],dur:1000,delay:0};
+const PS_SUBS=[
+  {el:null,pts:[{x:345,y:158},{x:430,y:158},{x:500,y:105},{x:550,y:85}],dur:1200,delay:1100},
+  {el:null,pts:[{x:345,y:158},{x:430,y:160},{x:550,y:160}],dur:1000,delay:1100},
+  {el:null,pts:[{x:345,y:158},{x:430,y:165},{x:500,y:220},{x:550,y:232}],dur:1200,delay:1100},
+];
+function stopMiniAnim(){if(miniAnimHandle){cancelAnimationFrame(miniAnimHandle);miniAnimHandle=null;}['ps-pub','ps-s1','ps-s2','ps-s3'].forEach(id=>{const e=document.getElementById(id);if(e)e.setAttribute('opacity','0');});}
+function startPubSubAnim(){stopMiniAnim();PS_PUB.el=document.getElementById('ps-pub');PS_SUBS.forEach((s,i)=>{s.el=document.getElementById('ps-s'+(i+1));});let ls=null,totalDur=2800;function tick(now){if(!ls)ls=now;const cycle=now-ls;const updateParticle=(cfg,t)=>{const e=t-cfg.delay;if(e<0||!cfg.el){if(cfg.el)cfg.el.setAttribute('opacity','0');return;}const prog=Math.min(e/cfg.dur,1);const idx=Math.floor(prog*(cfg.pts.length-1));const lt=(prog*(cfg.pts.length-1))-idx;const a=cfg.pts[Math.min(idx,cfg.pts.length-1)];const b=cfg.pts[Math.min(idx+1,cfg.pts.length-1)];cfg.el.setAttribute('cx',lerp(a.x,b.x,lt).toFixed(1));cfg.el.setAttribute('cy',lerp(a.y,b.y,lt).toFixed(1));cfg.el.setAttribute('opacity',prog>=1?'0':'1');};updateParticle(PS_PUB,cycle);PS_SUBS.forEach(s=>updateParticle(s,cycle));if(cycle>totalDur+400){ls=null;}miniAnimHandle=requestAnimationFrame(tick);}miniAnimHandle=requestAnimationFrame(tick);}
+
+// ── Service drawer ───────────────────────────────────────────
+const drawer=document.getElementById('drawer');
+document.querySelectorAll('.service-box').forEach(box=>{box.addEventListener('click',()=>{const d=svcDetails[box.dataset.id];if(!d)return;document.getElementById('drawer-title').textContent=d.title;document.getElementById('drawer-title').style.color=d.color;document.getElementById('drawer-body').innerHTML=d.items.map(i=>`<div class="drawer-item"><div class="di-label">${i.l}</div><div class="di-val">${i.v}</div></div>`).join('');drawer.classList.add('open');});});
+document.getElementById('drawer-close').addEventListener('click',()=>drawer.classList.remove('open'));
+document.addEventListener('keydown',e=>{if(e.key==='Escape')drawer.classList.remove('open');});
+</script>
+</body>
+</html>
