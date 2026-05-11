@@ -8,6 +8,7 @@ import java.util.Optional;
 
 interface SpringDataUserRepository extends JpaRepository<User, String> {
     Optional<User> findByEmail(String email);
+    Optional<User> findByResetTokenHash(String resetTokenHash);
     boolean existsByEmail(String email);
 }
 
@@ -23,6 +24,9 @@ class JpaUserRepository implements UserRepository {
 
     @Override
     public Optional<User> findByEmail(String email) { return repo.findByEmail(email); }
+
+    @Override
+    public Optional<User> findByResetTokenHash(String resetTokenHash) { return repo.findByResetTokenHash(resetTokenHash); }
 
     @Override
     public boolean existsByEmail(String email) { return repo.existsByEmail(email); }

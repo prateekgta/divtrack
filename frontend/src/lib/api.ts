@@ -42,7 +42,7 @@ api.interceptors.response.use(
 export default api;
 
 export const authApi = {
-  register: (data: { email: string; password: string; name: string }) =>
+  register: (data: { email: string; password: string; name: string; securityQuestion1: string; securityAnswer1: string; securityQuestion2: string; securityAnswer2: string }) =>
     api.post('/api/auth/register', data),
   login: (data: { email: string; password: string }) =>
     api.post('/api/auth/login', data),
@@ -50,6 +50,12 @@ export const authApi = {
     api.post('/api/auth/refresh', { refreshToken }),
   logout: (refreshToken: string) =>
     api.post('/api/auth/logout', { refreshToken }),
+  forgotPassword: (email: string) =>
+    api.post('/api/auth/forgot-password', { email }),
+  verifySecurity: (email: string, answers: string[]) =>
+    api.post('/api/auth/verify-security', { email, answers }),
+  resetPassword: (resetToken: string, newPassword: string) =>
+    api.post('/api/auth/reset-password', { resetToken, newPassword }),
 };
 
 export const portfolioApi = {

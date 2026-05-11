@@ -29,13 +29,19 @@ public class AuthDomainService {
 
     private static final SecureRandom SECURE_RANDOM = new SecureRandom();
 
-    public User register(String email, String password, String name) {
+    public User register(String email, String password, String name,
+                          String securityQuestion1, String securityAnswer1,
+                          String securityQuestion2, String securityAnswer2) {
         String normalizedEmail = email.toLowerCase().trim();
         if (userRepository.existsByEmail(normalizedEmail)) {
             throw new EmailAlreadyExistsException(email);
         }
         String hash = passwordEncoder.encode(password);
         User user = new User(normalizedEmail, hash, name.trim());
+        user.setSecurityQuestion1(securityQuestion1);
+        user.setSecurityAnswer1(securityAnswer1);
+        user.setSecurityQuestion2(securityQuestion2);
+        user.setSecurityAnswer2(securityAnswer2);
         return userRepository.save(user);
     }
 
@@ -101,7 +107,32 @@ public class AuthDomainService {
         return Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
     }
 
-    private String sha256Hex(String input) {
+    public User findByEmail(String email) {
+        return userRepository.findByEmail(email.toLowerCase().trim())
+                .orElseThrow(() -> new IllegalArgumentException("No account found with that email"));
+    }
+
+    public String initiatePasswordReset(User user) {
+        String raw = generateSecureToken();
+        String hash = sha256Hex(raw);
+        user.setResetToken(hash, OffsetDateTime.now().plusMinutes(15));
+        userRepository.save(user);
+        return raw;
+    }
+
+    public void resetPassword(String rawToken, String newPassword) {
+        String hash = sha256Hex(rawToken);
+        User user = userRepository.findByResetTokenHash(hash)
+                .orElseThrow(() -> new IllegalArgumentException("Invalid or expired reset token"));
+        if (!user.isResetTokenValid(hash)) {
+            throw new IllegalArgumentException("Invalid or expired reset token");
+        }
+        user.setPasswordHash(passwordEncoder.encode(newPassword));
+        user.clearResetToken();
+        userRepository.save(user);
+    }
+
+    public String sha256Hex(String input) {
         try {
             MessageDigest digest = MessageDigest.getInstance("SHA-256");
             byte[] hash = digest.digest(input.getBytes(StandardCharsets.UTF_8));

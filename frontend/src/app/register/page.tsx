@@ -5,10 +5,23 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/lib/auth-context';
 
+const COMMON_QUESTIONS = [
+  'What is your pet name?',
+  'What city were you born in?',
+  'What is your mother maiden name?',
+  'What elementary school did you attend?',
+  'What was the make of your first car?',
+  'What is your favorite book?',
+];
+
 export default function RegisterPage() {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [q1, setQ1] = useState(COMMON_QUESTIONS[0]);
+  const [a1, setA1] = useState('');
+  const [q2, setQ2] = useState(COMMON_QUESTIONS[1]);
+  const [a2, setA2] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const { register } = useAuth();
@@ -19,7 +32,7 @@ export default function RegisterPage() {
     setError('');
     setLoading(true);
     try {
-      await register(email, password, name);
+      await register(email, password, name, q1, a1, q2, a2);
       router.push('/dashboard');
     } catch (err: any) {
       setError(err.response?.data?.detail || 'Registration failed');
@@ -61,6 +74,33 @@ export default function RegisterPage() {
               <input type="password" className="input-field" value={password}
                 onChange={e => setPassword(e.target.value)} required minLength={8} placeholder="At least 8 characters" />
             </div>
+
+            <hr className="border-earth-200" />
+            <p className="text-xs text-earth-500 -mb-2">Security questions — used to recover your account</p>
+
+            <div>
+              <label className="block text-sm font-medium text-earth-700 mb-1.5">Security Question 1</label>
+              <select className="input-field" value={q1} onChange={e => setQ1(e.target.value)}>
+                {COMMON_QUESTIONS.map(q => <option key={q} value={q}>{q}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-earth-700 mb-1.5">Answer 1</label>
+              <input type="text" className="input-field" value={a1}
+                onChange={e => setA1(e.target.value)} required placeholder="Your answer" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-earth-700 mb-1.5">Security Question 2</label>
+              <select className="input-field" value={q2} onChange={e => setQ2(e.target.value)}>
+                {COMMON_QUESTIONS.map(q => <option key={q} value={q}>{q}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-earth-700 mb-1.5">Answer 2</label>
+              <input type="text" className="input-field" value={a2}
+                onChange={e => setA2(e.target.value)} required placeholder="Your answer" />
+            </div>
+
             <button type="submit" disabled={loading} className="btn-primary w-full flex items-center justify-center gap-2">
               {loading ? (
                 <><span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Planting...</>

@@ -38,4 +38,20 @@ public class AuthController {
         appService.logout(req);
         return ResponseEntity.noContent().build();
     }
+
+    @PostMapping("/forgot-password")
+    public ResponseEntity<ForgotPasswordResponse> forgotPassword(@Valid @RequestBody ForgotPasswordRequest req) {
+        return ResponseEntity.ok(appService.forgotPassword(req));
+    }
+
+    @PostMapping("/verify-security")
+    public ResponseEntity<VerifySecurityResponse> verifySecurity(@Valid @RequestBody VerifySecurityRequest req) {
+        return ResponseEntity.ok(appService.verifySecurity(req));
+    }
+
+    @PostMapping("/reset-password")
+    public ResponseEntity<Void> resetPassword(@Valid @RequestBody ResetPasswordRequest req) {
+        appService.resetPassword(req);
+        return ResponseEntity.ok().build();
+    }
 }

@@ -37,6 +37,7 @@ public class TestDataSeeder {
         seed("NYMT", "New York Mortgage Trust", "Real Estate", 7.50, 14.20, "QUARTERLY", "US", "high_yield");
         seed("ET", "Energy Transfer", "Energy", 16.20, 8.10, "QUARTERLY", "US", "high_yield");
         seed("EPD", "Enterprise Products Partners", "Energy", 29.80, 7.20, "QUARTERLY", "US", "high_yield");
+        seed("STRD", "Strategy 10% Series A Perpetual Preferred", "Financial", 78.00, 12.80, "QUARTERLY", "US", "high_yield");
 
         // ── MONTHLY INCOME ────────────────────────────────────────────────
         seed("O", "Realty Income", "Real Estate", 58.40, 5.80, "MONTHLY", "US", "monthly_income");
