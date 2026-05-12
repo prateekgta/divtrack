@@ -4,6 +4,6 @@
   "outputDirectory": ".next",
   "installCommand": "npm ci",
   "env": {
-    "NEXT_PUBLIC_API_URL": "https://divtrack-backend.onrender.com"
+    "NEXT_PUBLIC_API_URL": "https://divtrack-backend-8quu.onrender.com"
   }
 }
