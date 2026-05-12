@@ -2,9 +2,8 @@ package io.divtrack.common;
 
 import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.mail.MailException;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
@@ -12,11 +11,13 @@ import org.springframework.stereotype.Service;
 
 @Slf4j
 @Service
-@RequiredArgsConstructor
-@ConditionalOnProperty(name = "app.mail.enabled", havingValue = "true", matchIfMissing = false)
 public class EmailService {
 
     private final JavaMailSender mailSender;
+
+    public EmailService(@Autowired(required = false) JavaMailSender mailSender) {
+        this.mailSender = mailSender;
+    }
 
     public void sendPasswordResetEmail(String to, String resetToken) {
         String subject = "DivTrack — Password Reset Request";
@@ -37,6 +38,10 @@ public class EmailService {
     }
 
     private void sendHtml(String to, String subject, String html) {
+        if (mailSender == null) {
+            log.warn("Mail not configured — skipping email to {}: {}", to, subject);
+            return;
+        }
         try {
             MimeMessage msg = mailSender.createMimeMessage();
             MimeMessageHelper helper = new MimeMessageHelper(msg, true, "UTF-8");
