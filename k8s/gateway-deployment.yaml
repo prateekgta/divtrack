@@ -1,0 +1,67 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: gateway
+  namespace: divtrack
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: gateway
+  template:
+    metadata:
+      labels:
+        app: gateway
+    spec:
+      containers:
+        - name: gateway
+          image: divtrack/gateway:latest
+          ports:
+            - containerPort: 3000
+          env:
+            - name: REDIS_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: divtrack-config
+                  key: REDIS_HOST
+            - name: REDIS_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: divtrack-config
+                  key: REDIS_PORT
+            - name: AUTH_SERVICE_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: divtrack-config
+                  key: AUTH_SERVICE_URL
+            - name: PORTFOLIO_SERVICE_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: divtrack-config
+                  key: PORTFOLIO_SERVICE_URL
+            - name: MARKET_SERVICE_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: divtrack-config
+                  key: MARKET_SERVICE_URL
+            - name: JWT_PUBLIC_KEY_LOCATION
+              value: classpath:keys/public.pem
+          livenessProbe:
+            httpGet:
+              path: /actuator/health
+              port: 3000
+            initialDelaySeconds: 30
+            periodSeconds: 15
+          readinessProbe:
+            httpGet:
+              path: /actuator/health
+              port: 3000
+            initialDelaySeconds: 15
+            periodSeconds: 5
+          resources:
+            requests:
+              memory: 128Mi
+              cpu: 250m
+            limits:
+              memory: 256Mi
+              cpu: 500m

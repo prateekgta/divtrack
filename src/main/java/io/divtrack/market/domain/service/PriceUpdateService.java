@@ -11,10 +11,9 @@ import org.springframework.cache.annotation.Cacheable;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
+import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Map;
-
-import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 @Service
@@ -33,11 +32,13 @@ public class PriceUpdateService {
 
         Map<String, MarketDataProvider.PriceData> prices = marketDataProvider.fetchPrices(stocks);
         int updated = 0;
+        OffsetDateTime now = OffsetDateTime.now();
 
         for (Stock stock : stocks) {
             MarketDataProvider.PriceData data = prices.get(stock.getTicker().toUpperCase());
             if (data != null) {
                 stock.updatePrice(data.price(), data.yieldPct());
+                stock.setLastPriceUpdate(now);
                 updated++;
             }
         }

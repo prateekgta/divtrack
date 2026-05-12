@@ -9,6 +9,23 @@ interface Stock {
   price: number; yieldPct: number; dividendFrequency: string;
   previousClose: number; changePct: number; country: string; category: string;
   parValue: number | null; nonCumulative: boolean; tags: string | null;
+  lastPriceUpdate: string | null;
+}
+
+function FreshnessDot({ lastPriceUpdate }: { lastPriceUpdate: string | null }) {
+  if (!lastPriceUpdate) {
+    return <span className="inline-block w-1.5 h-1.5 rounded-full bg-gray-300" title="Price never updated" />;
+  }
+  const updated = new Date(lastPriceUpdate).getTime();
+  const now = Date.now();
+  const hours = (now - updated) / (1000 * 60 * 60);
+  if (hours <= 1) {
+    return <span className="inline-block w-1.5 h-1.5 rounded-full bg-green-500" title="Updated within the last hour" />;
+  }
+  if (hours <= 24) {
+    return <span className="inline-block w-1.5 h-1.5 rounded-full bg-amber-400" title={`Updated ${Math.round(hours)}h ago`} />;
+  }
+  return <span className="inline-block w-1.5 h-1.5 rounded-full bg-gray-400" title={`Updated ${Math.round(hours)}h ago - stale`} />;
 }
 
 const CATEGORIES = [
@@ -146,6 +163,7 @@ function StockRow({ stock: s, onSelect, onDetail, rank }: {
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-1.5 flex-wrap">
           <p className="font-semibold text-earth-800 text-sm">{s.ticker}</p>
+          <FreshnessDot lastPriceUpdate={s.lastPriceUpdate} />
           {s.nonCumulative && (
             <span className="text-[9px] px-1 py-0.5 rounded bg-amber-100 text-amber-700 font-semibold leading-none">NC</span>
           )}

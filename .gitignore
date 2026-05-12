@@ -18,6 +18,10 @@ next-env.d.ts
 .env.production
 jwt_*.pem
 
+# Generated keys
+jwt_private.pem
+jwt_public.pem
+
 # AI assistant config
 .claude/
 

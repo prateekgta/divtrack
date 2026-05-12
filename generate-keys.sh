@@ -1,18 +1,18 @@
-# Generate RSA keys for JWT
-# Run this script to create keys, then export them as env vars
+#!/bin/bash
+set -euo pipefail
 
-openssl genrsa -out private.pem 2048
-openssl pkcs8 -topk8 -inform PEM -outform PEM -nocrypt -in private.pem -out private_pkcs8.pem
-openssl rsa -pubout -in private.pem -out public.pem
+PRIVATE_KEY_FILE="jwt_private.pem"
+PUBLIC_KEY_FILE="jwt_public.pem"
 
+openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:2048 -out "$PRIVATE_KEY_FILE" 2>/dev/null
+openssl pkey -in "$PRIVATE_KEY_FILE" -pubout -out "$PUBLIC_KEY_FILE" 2>/dev/null
+
+# Format private key for .env (single line with \n)
+PRIVATE_SINGLE=$(awk 'BEGIN {ORS="\\n"} {print}' "$PRIVATE_KEY_FILE")
+PUBLIC_SINGLE=$(awk 'BEGIN {ORS="\\n"} {print}' "$PUBLIC_KEY_FILE")
+
+echo "=== Add these to your .env file ==="
+echo "JWT_PRIVATE_KEY=$PRIVATE_SINGLE"
+echo "JWT_PUBLIC_KEY=$PUBLIC_SINGLE"
 echo ""
-echo "=== EXPORT THESE ENV VARS ==="
-echo "export JWT_PRIVATE_KEY='$(cat private_pkcs8.pem)'"
-echo "export JWT_PUBLIC_KEY='$(cat public.pem)'"
-echo ""
-echo "==== OR use single-line format (paste into .env): ===="
-echo "JWT_PRIVATE_KEY=$(cat private_pkcs8.pem | tr '\n' '\\n')"
-echo "JWT_PUBLIC_KEY=$(cat public.pem | tr '\n' '\\n')"
-
-# Cleanup
-rm private.pem private_pkcs8.pem public.pem
+echo "Keys saved to $PRIVATE_KEY_FILE and $PUBLIC_KEY_FILE"

@@ -1,59 +1,93 @@
 package io.divtrack.market.infrastructure.scraping;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import io.divtrack.market.domain.model.Stock;
 import io.divtrack.market.domain.port.MarketDataProvider;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.jsoup.Jsoup;
-import org.jsoup.nodes.Document;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
-import java.util.HashMap;
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Executors;
 
 @Slf4j
 @Component
 @ConditionalOnProperty(name = "app.market.provider", havingValue = "yahoo", matchIfMissing = true)
+@RequiredArgsConstructor
 public class YahooFinanceProvider implements MarketDataProvider {
 
-    private static final String URL_TEMPLATE = "https://finance.yahoo.com/quote/%s/";
+    private static final String CHART_URL = "https://query1.finance.yahoo.com/v8/finance/chart/%s?range=1d&interval=1d";
+
+    private final ObjectMapper objectMapper;
+
+    private final HttpClient httpClient = HttpClient.newBuilder()
+            .executor(Executors.newVirtualThreadPerTaskExecutor())
+            .build();
 
     @Override
     public Map<String, PriceData> fetchPrices(List<Stock> stocks) {
-        Map<String, PriceData> results = new HashMap<>();
+        Map<String, PriceData> results = new ConcurrentHashMap<>();
 
-        for (Stock stock : stocks) {
-            try {
-                String url = String.format(URL_TEMPLATE, stock.getTicker());
-                Document doc = Jsoup.connect(url)
-                        .timeout(10_000)
-                        .userAgent("Mozilla/5.0")
-                        .get();
+        CompletableFuture<?>[] futures = stocks.stream()
+                .map(stock -> fetchStockPrice(stock)
+                        .thenAccept(data -> {
+                            if (data != null) {
+                                results.put(stock.getTicker().toUpperCase(), data);
+                            }
+                        })
+                        .exceptionally(e -> {
+                            log.debug("Failed to fetch {}: {}", stock.getTicker(), e.getMessage());
+                            return null;
+                        }))
+                .toArray(CompletableFuture[]::new);
 
-                String priceText = doc.select("fin-streamer[data-field='regularMarketPrice']").first() != null
-                        ? doc.select("fin-streamer[data-field='regularMarketPrice']").first().attr("value")
-                        : null;
-                String yieldText = doc.select("td:contains(Dividend Yield) + td").first() != null
-                        ? doc.select("td:contains(Dividend Yield) + td").first().text().replace("%", "")
-                        : null;
+        CompletableFuture.allOf(futures).join();
+        return results;
+    }
 
-                BigDecimal price = parseBigDecimal(priceText);
-                BigDecimal yield = parseBigDecimal(yieldText);
+    private CompletableFuture<PriceData> fetchStockPrice(Stock stock) {
+        String url = String.format(CHART_URL, stock.getTicker());
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create(url))
+                .header("User-Agent", "Mozilla/5.0")
+                .build();
 
-                if (price != null && price.compareTo(BigDecimal.ZERO) > 0) {
-                    results.put(stock.getTicker(), new PriceData(stock.getTicker(), price, yield != null ? yield : stock.getYieldPct()));
-                }
-            } catch (Exception e) {
-                log.debug("Failed to fetch {}: {}", stock.getTicker(), e.getMessage());
+        return httpClient.sendAsync(request, HttpResponse.BodyHandlers.ofString())
+                .thenApply(response -> parsePriceData(response.body(), stock));
+    }
+
+    private PriceData parsePriceData(String body, Stock stock) {
+        try {
+            JsonNode root = objectMapper.readTree(body);
+            JsonNode meta = root.path("chart").path("result").get(0).path("meta");
+
+            BigDecimal price = parseBigDecimal(meta.path("regularMarketPrice").asText(null));
+            if (price == null || price.compareTo(BigDecimal.ZERO) <= 0) return null;
+
+            BigDecimal yield = parseBigDecimal(meta.path("regularMarketYield").asText(null));
+            if (yield == null) {
+                yield = parseBigDecimal(meta.path("yield").asText(null));
+            }
+            if (yield == null) {
+                yield = stock.getYieldPct();
             }
 
-            try { Thread.sleep(500); } catch (InterruptedException e) { Thread.currentThread().interrupt(); break; }
+            return new PriceData(stock.getTicker(), price, yield);
+        } catch (Exception e) {
+            log.debug("Failed to parse price for {}: {}", stock.getTicker(), e.getMessage());
+            return null;
         }
-
-        return results;
     }
 
     private BigDecimal parseBigDecimal(String text) {

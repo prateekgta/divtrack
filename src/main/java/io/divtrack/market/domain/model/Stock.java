@@ -17,7 +17,7 @@ public class Stock extends BaseEntity {
     @Column(nullable = false, precision = 12, scale = 4)
     private BigDecimal price = BigDecimal.ZERO;
 
-    @Column(name = "yield_pct", nullable = false, precision = 6, scale = 4)
+    @Column(name = "yield_pct", nullable = false, precision = 8, scale = 4)
     private BigDecimal yieldPct = BigDecimal.ZERO;
 
     @Column(name = "dividend_frequency", nullable = false)
@@ -26,7 +26,7 @@ public class Stock extends BaseEntity {
     @Column(name = "previous_close", precision = 12, scale = 4)
     private BigDecimal previousClose = BigDecimal.ZERO;
 
-    @Column(name = "change_pct", precision = 6, scale = 4)
+    @Column(name = "change_pct", precision = 8, scale = 4)
     private BigDecimal changePct = BigDecimal.ZERO;
 
     @Column(length = 50)
@@ -40,6 +40,9 @@ public class Stock extends BaseEntity {
 
     @Column(length = 200)
     private String tags;
+
+    @Column(name = "last_price_update")
+    private java.time.OffsetDateTime lastPriceUpdate;
 
     @Column(length = 30)
     private String category = "income";
@@ -63,6 +66,10 @@ public class Stock extends BaseEntity {
         } else {
             this.changePct = BigDecimal.ZERO;
         }
+        if (changePct.compareTo(BigDecimal.valueOf(50)) > 0
+                || changePct.compareTo(BigDecimal.valueOf(-50)) < 0) {
+            this.changePct = BigDecimal.ZERO;
+        }
     }
 
     public String getTicker() { return ticker; }
@@ -84,4 +91,6 @@ public class Stock extends BaseEntity {
     public void setNonCumulative(boolean nonCumulative) { this.nonCumulative = nonCumulative; }
     public String getTags() { return tags; }
     public void setTags(String tags) { this.tags = tags; }
+    public java.time.OffsetDateTime getLastPriceUpdate() { return lastPriceUpdate; }
+    public void setLastPriceUpdate(java.time.OffsetDateTime lastPriceUpdate) { this.lastPriceUpdate = lastPriceUpdate; }
 }

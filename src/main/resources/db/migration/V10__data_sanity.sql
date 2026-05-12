@@ -1,0 +1,1 @@
+ALTER TABLE stocks ADD COLUMN last_price_update TIMESTAMP WITH TIME ZONE;

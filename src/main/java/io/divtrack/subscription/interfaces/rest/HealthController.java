@@ -9,8 +9,8 @@ import java.util.Map;
 @RestController
 public class HealthController {
 
-    @GetMapping("/actuator/health")
-    public ResponseEntity<Map<String, String>> health() {
-        return ResponseEntity.ok(Map.of("status", "UP"));
+    @GetMapping("/api/health")
+    public ResponseEntity<Map<String, String>> ping() {
+        return ResponseEntity.ok(Map.of("status", "UP", "app", "DivTrack"));
     }
 }

@@ -1,5 +1,6 @@
 package io.divtrack.identity.application.service;
 
+import io.divtrack.common.EmailService;
 import io.divtrack.identity.application.dto.*;
 import io.divtrack.identity.domain.model.User;
 import io.divtrack.identity.domain.service.AuthDomainService;
@@ -7,17 +8,19 @@ import io.divtrack.identity.domain.service.AuthDomainService.TokenPair;
 import io.divtrack.identity.domain.service.AuthDomainService.RefreshResult;
 import io.divtrack.identity.infrastructure.security.JwtProvider;
 import jakarta.transaction.Transactional;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
-import java.util.List;
-
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class IdentityApplicationService {
 
     private final AuthDomainService authDomain;
     private final JwtProvider jwtProvider;
+    private final EmailService emailService;
 
     @Transactional
     public AuthResponse register(RegisterRequest req) {
@@ -45,12 +48,15 @@ public class IdentityApplicationService {
     }
 
     public ForgotPasswordResponse forgotPassword(ForgotPasswordRequest req) {
-        User user = authDomain.findByEmail(req.email());
-        if (!user.hasSecurityQuestions()) {
-            throw new IllegalStateException("No security questions set for this account. Contact support.");
+        try {
+            User user = authDomain.findByEmail(req.email());
+            String resetToken = authDomain.initiatePasswordReset(user);
+            emailService.sendPasswordResetEmail(user.getEmail(), resetToken);
+        } catch (Exception e) {
+            log.warn("Password reset requested for unknown email: {}", req.email());
         }
-        return new ForgotPasswordResponse(user.getEmail(),
-                List.of(user.getSecurityQuestion1(), user.getSecurityQuestion2()));
+        return new ForgotPasswordResponse(req.email(),
+                "If the account exists, a reset link has been sent.");
     }
 
     @Transactional

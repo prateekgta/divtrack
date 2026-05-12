@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: divtrack-config
+  namespace: divtrack
+data:
+  DB_NAME: divtrack
+  DB_USER: divtrack
+  SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/divtrack?currentSchema=public
+  SPRING_CACHE_SPEC: maximumSize=10000,expireAfterWrite=90s
+  JAVA_TOOL_OPTIONS: -Xmx256m -Xms128m -XX:+UseG1GC -XX:+UseContainerSupport
+  NEXT_PUBLIC_API_URL: http://backend:8080
+  REDIS_HOST: redis
+  REDIS_PORT: "6379"
+  AUTH_SERVICE_URL: http://backend:8080
+  PORTFOLIO_SERVICE_URL: http://backend:8080
+  MARKET_SERVICE_URL: http://backend:8080

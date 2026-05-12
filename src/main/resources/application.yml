@@ -58,10 +58,34 @@ app:
     pro-tier:
       price: 5
 
+  stripe:
+    secret-key: ${STRIPE_SECRET_KEY:}
+    success-url: ${STRIPE_SUCCESS_URL:http://localhost:3000/dashboard}
+    cancel-url: ${STRIPE_CANCEL_URL:http://localhost:3000/pricing}
+
 logging:
   level:
     io.divtrack: INFO
     org.springframework.security: WARN
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health, info, metrics
+  endpoint:
+    health:
+      show-details: when-authorized
+  info:
+    env:
+      enabled: true
+
+springdoc:
+  api-docs:
+    path: /api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    operations-sorter: method
 
 ---
 spring:

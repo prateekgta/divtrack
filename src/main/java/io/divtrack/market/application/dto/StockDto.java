@@ -1,6 +1,7 @@
 package io.divtrack.market.application.dto;
 
 import java.math.BigDecimal;
+import java.time.OffsetDateTime;
 
 public record StockDto(
         String id,
@@ -16,13 +17,15 @@ public record StockDto(
         String category,
         BigDecimal parValue,
         boolean nonCumulative,
-        String tags
+        String tags,
+        OffsetDateTime lastPriceUpdate
 ) {
     public static StockDto from(io.divtrack.market.domain.model.Stock stock) {
         return new StockDto(stock.getId(), stock.getTicker(), stock.getName(),
                 stock.getSector(), stock.getPrice(), stock.getYieldPct(),
                 stock.getDividendFrequency(), stock.getPreviousClose(),
                 stock.getChangePct(), stock.getCountry(), stock.getCategory(),
-                stock.getParValue(), stock.isNonCumulative(), stock.getTags());
+                stock.getParValue(), stock.isNonCumulative(), stock.getTags(),
+                stock.getLastPriceUpdate());
     }
 }

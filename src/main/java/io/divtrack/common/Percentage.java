@@ -7,8 +7,8 @@ public record Percentage(BigDecimal value) {
 
     public Percentage {
         if (value == null) throw new IllegalArgumentException("value must not be null");
-        if (value.compareTo(BigDecimal.ZERO) < 0 || value.compareTo(BigDecimal.valueOf(100)) > 0) {
-            throw new IllegalArgumentException("percentage must be between 0 and 100");
+        if (value.compareTo(BigDecimal.ZERO) < 0 || value.compareTo(BigDecimal.valueOf(100000)) > 0) {
+            throw new IllegalArgumentException("percentage must be between 0 and 100000");
         }
     }
 

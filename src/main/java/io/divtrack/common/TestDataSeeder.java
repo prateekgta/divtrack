@@ -37,10 +37,10 @@ public class TestDataSeeder {
         seed("NYMT", "New York Mortgage Trust", "Real Estate", 7.50, 14.20, "QUARTERLY", "US", "high_yield", null, false, "mREIT");
         seed("ET", "Energy Transfer", "Energy", 16.20, 8.10, "QUARTERLY", "US", "high_yield", null, false, "mlp");
         seed("EPD", "Enterprise Products Partners", "Energy", 29.80, 7.20, "QUARTERLY", "US", "high_yield", null, false, "mlp");
-        seed("STRD", "Strategy 10% Series A Perpetual Preferred", "Financial", 78.00, 12.80, "QUARTERLY", "US", "high_yield", BigDecimal.valueOf(100), true, "preferred-stock,perpetual-preferred,bitcoin-exposed");
-        seed("STRC", "Strategy 8% Series A Perpetual Strike Preferred", "Financial", 52.00, 15.40, "MONTHLY", "US", "high_yield", BigDecimal.valueOf(100), true, "preferred-stock,perpetual-preferred,bitcoin-exposed");
-        seed("STRK", "Strategy Series A Perpetual Strike Preferred", "Financial", 12.50, 14.20, "QUARTERLY", "US", "high_yield", BigDecimal.valueOf(25), true, "preferred-stock,perpetual-preferred,bitcoin-exposed");
-        seed("STRF", "Strategy 10% Series A Perpetual Stride Preferred", "Financial", 90.00, 11.10, "QUARTERLY", "US", "high_yield", BigDecimal.valueOf(100), false, "preferred-stock,perpetual-preferred,bitcoin-exposed,cumulative");
+        seed("STRD", "Strategy 10% Series A Perpetual Preferred", "Financial", 75.79, 13.19, "QUARTERLY", "US", "high_yield", BigDecimal.valueOf(100), true, "preferred-stock,perpetual-preferred,bitcoin-exposed");
+        seed("STRC", "Strategy Variable Rate Perpetual Stretch Preferred", "Financial", 99.95, 11.50, "MONTHLY", "US", "high_yield", BigDecimal.valueOf(100), true, "preferred-stock,perpetual-preferred,bitcoin-exposed,variable-rate");
+        seed("STRK", "Strategy 8% Series A Perpetual Strike Preferred", "Financial", 12.50, 16.00, "QUARTERLY", "US", "high_yield", BigDecimal.valueOf(25), true, "preferred-stock,perpetual-preferred,bitcoin-exposed");
+        seed("STRF", "Strategy 10% Series A Perpetual Strife Preferred", "Financial", 100.30, 9.97, "QUARTERLY", "US", "high_yield", BigDecimal.valueOf(100), false, "preferred-stock,perpetual-preferred,bitcoin-exposed,cumulative");
 
         // ── MONTHLY INCOME ────────────────────────────────────────────────
         seed("O", "Realty Income", "Real Estate", 58.40, 5.80, "MONTHLY", "US", "monthly_income");

@@ -1,0 +1,48 @@
+# Render Blueprint — one-click deploy for DivTrack
+# https://render.com/docs/blueprint-spec
+services:
+  # ── PostgreSQL ──
+  - type: pservers
+    name: divtrack-db
+    plan: free
+    region: oregon
+    env: postgres
+    disk:
+      name: pgdata
+      mountPath: /var/lib/postgresql/data
+      sizeGB: 1
+
+  # ── Spring Boot Backend ──
+  - type: web
+    name: divtrack-backend
+    plan: free
+    region: oregon
+    env: java
+    buildCommand: ./mvnw package -DskipTests -B
+    startCommand: java -jar target/*.jar
+    healthCheckPath: /api/health
+    envVars:
+      - key: SPRING_DATASOURCE_URL
+        fromService:
+          type: pservers
+          name: divtrack-db
+          property: hostport
+        value: jdbc:postgresql://${RENDER_SERVICE_URL}/divtrack?currentSchema=public
+      - key: SPRING_DATASOURCE_USERNAME
+        fromService:
+          type: pservers
+          name: divtrack-db
+          property: user
+      - key: SPRING_DATASOURCE_PASSWORD
+        fromService:
+          type: pservers
+          name: divtrack-db
+          property: password
+      - key: JWT_PRIVATE_KEY
+        sync: false
+      - key: JWT_PUBLIC_KEY
+        sync: false
+      - key: APP_MAIL_ENABLED
+        value: "false"
+      - key: JAVA_TOOL_OPTIONS
+        value: "-Xmx256m -Xms128m -XX:+UseG1GC -XX:+UseContainerSupport"
