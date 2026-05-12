@@ -8,6 +8,8 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import java.security.KeyFactory;
+import java.security.KeyPair;
+import java.security.KeyPairGenerator;
 import java.security.interfaces.RSAPrivateKey;
 import java.security.interfaces.RSAPublicKey;
 import java.security.spec.PKCS8EncodedKeySpec;
@@ -30,11 +32,23 @@ public class JwtProvider {
             @Value("${app.jwt.expiry-minutes:15}") long expiryMinutes
     ) {
         this.expiryMinutes = expiryMinutes;
-        try {
-            this.privateKey = parsePrivateKey(privateKeyPem);
-            this.publicKey = parsePublicKey(publicKeyPem);
-        } catch (Exception e) {
-            throw new IllegalStateException("Failed to load JWT RSA keys", e);
+        if (privateKeyPem == null || privateKeyPem.isBlank() || publicKeyPem == null || publicKeyPem.isBlank()) {
+            try {
+                KeyPairGenerator gen = KeyPairGenerator.getInstance("RSA");
+                gen.initialize(2048);
+                KeyPair pair = gen.generateKeyPair();
+                this.privateKey = (RSAPrivateKey) pair.getPrivate();
+                this.publicKey = (RSAPublicKey) pair.getPublic();
+            } catch (Exception e) {
+                throw new IllegalStateException("Failed to generate temporary JWT RSA keys", e);
+            }
+        } else {
+            try {
+                this.privateKey = parsePrivateKey(privateKeyPem);
+                this.publicKey = parsePublicKey(publicKeyPem);
+            } catch (Exception e) {
+                throw new IllegalStateException("Failed to load JWT RSA keys", e);
+            }
         }
     }
 
