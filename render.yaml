@@ -10,9 +10,8 @@ services:
     name: divtrack-backend
     plan: free
     region: oregon
-    env: java
-    buildCommand: ./mvnw package -DskipTests -B
-    startCommand: java -jar target/*.jar
+    runtime: docker
+    dockerfilePath: ./Dockerfile
     healthCheckPath: /api/health
     envVars:
       - key: SPRING_DATASOURCE_URL
