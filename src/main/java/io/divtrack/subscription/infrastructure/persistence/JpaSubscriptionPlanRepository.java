@@ -24,7 +24,7 @@ public class JpaSubscriptionPlanRepository implements SubscriptionPlanRepository
     @Override
     public Optional<SubscriptionPlan> findByName(String name) { return repo.findByName(name); }
 
-    private interface SpringDataRepo extends JpaRepository<SubscriptionPlan, String> {
+    interface SpringDataRepo extends JpaRepository<SubscriptionPlan, String> {
         Optional<SubscriptionPlan> findByName(String name);
     }
 }

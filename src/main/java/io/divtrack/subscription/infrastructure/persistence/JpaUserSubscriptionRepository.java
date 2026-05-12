@@ -23,7 +23,7 @@ public class JpaUserSubscriptionRepository implements UserSubscriptionRepository
     @Override
     public UserSubscription save(UserSubscription subscription) { return repo.save(subscription); }
 
-    private interface SpringDataRepo extends JpaRepository<UserSubscription, String> {
+    interface SpringDataRepo extends JpaRepository<UserSubscription, String> {
         Optional<UserSubscription> findByUserId(String userId);
         Optional<UserSubscription> findByStripeSubscriptionId(String stripeSubscriptionId);
     }
