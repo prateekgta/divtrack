@@ -1,13 +1,11 @@
 # Render Blueprint — one-click deploy for DivTrack
 # https://render.com/docs/blueprint-spec
-services:
-  # ── PostgreSQL ──
-  - type: postgres
-    name: divtrack-db
-    plan: free
-    region: oregon
+#
+# Step 1: Create a PostgreSQL database manually on Render
+# Step 2: Deploy this blueprint, then paste DB connection details into env vars
+# Step 3: Set JWT_PRIVATE_KEY and JWT_PUBLIC_KEY (run ./generate-keys.sh)
 
-  # ── Spring Boot Backend ──
+services:
   - type: web
     name: divtrack-backend
     plan: free
@@ -18,21 +16,11 @@ services:
     healthCheckPath: /api/health
     envVars:
       - key: SPRING_DATASOURCE_URL
-        fromService:
-          type: postgres
-          name: divtrack-db
-          property: hostport
-        value: jdbc:postgresql://${RENDER_SERVICE_URL}/divtrack?currentSchema=public
+        value: jdbc:postgresql://<host>:<port>/divtrack?currentSchema=public
       - key: SPRING_DATASOURCE_USERNAME
-        fromService:
-          type: postgres
-          name: divtrack-db
-          property: user
+        value: divtrack
       - key: SPRING_DATASOURCE_PASSWORD
-        fromService:
-          type: postgres
-          name: divtrack-db
-          property: password
+        sync: false
       - key: JWT_PRIVATE_KEY
         sync: false
       - key: JWT_PUBLIC_KEY
