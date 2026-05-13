@@ -47,7 +47,16 @@ public class JwtProvider {
                 this.privateKey = parsePrivateKey(privateKeyPem);
                 this.publicKey = parsePublicKey(publicKeyPem);
             } catch (Exception e) {
-                throw new IllegalStateException("Failed to load JWT RSA keys", e);
+                log.warn("Failed to parse JWT keys from env, generating temp keys: {}", e.getMessage());
+                try {
+                    KeyPairGenerator gen = KeyPairGenerator.getInstance("RSA");
+                    gen.initialize(2048);
+                    KeyPair pair = gen.generateKeyPair();
+                    this.privateKey = (RSAPrivateKey) pair.getPrivate();
+                    this.publicKey = (RSAPublicKey) pair.getPublic();
+                } catch (Exception e2) {
+                    throw new IllegalStateException("Failed to generate temporary JWT RSA keys", e2);
+                }
             }
         }
     }
