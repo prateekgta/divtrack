@@ -51,7 +51,5 @@ services:
         sync: false
       - key: MARKET_SERVICE_URL
         sync: false
-      - key: JWT_PUBLIC_KEY
-        sync: false
       - key: JAVA_TOOL_OPTIONS
         value: "-Xmx256m -Xms128m -XX:+UseG1GC -XX:+UseContainerSupport"

@@ -33,13 +33,7 @@
       <artifactId>spring-boot-starter-data-redis-reactive</artifactId>
     </dependency>
 
-    <!-- JWT validation via Spring Security OAuth2 Resource Server -->
-    <dependency>
-      <groupId>org.springframework.boot</groupId>
-      <artifactId>spring-boot-starter-oauth2-resource-server</artifactId>
-    </dependency>
-
-    <!-- Actuator (health checks) -->
+        <!-- Actuator (health checks) -->
     <dependency>
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-starter-actuator</artifactId>
