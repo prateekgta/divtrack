@@ -24,7 +24,34 @@ services:
         sync: false
       - key: JWT_PUBLIC_KEY
         sync: false
+      - key: REDIS_HOST
+        value: localhost
+      - key: REDIS_PORT
+        value: "6379"
       - key: APP_MAIL_ENABLED
         value: "false"
+      - key: JAVA_TOOL_OPTIONS
+        value: "-Xmx256m -Xms128m -XX:+UseG1GC -XX:+UseContainerSupport"
+
+  - type: web
+    name: divtrack-gateway
+    plan: free
+    region: oregon
+    runtime: docker
+    dockerfilePath: ./gateway/Dockerfile
+    healthCheckPath: /actuator/health
+    envVars:
+      - key: REDIS_HOST
+        sync: false
+      - key: REDIS_PORT
+        value: "6379"
+      - key: AUTH_SERVICE_URL
+        sync: false
+      - key: PORTFOLIO_SERVICE_URL
+        sync: false
+      - key: MARKET_SERVICE_URL
+        sync: false
+      - key: JWT_PUBLIC_KEY
+        sync: false
       - key: JAVA_TOOL_OPTIONS
         value: "-Xmx256m -Xms128m -XX:+UseG1GC -XX:+UseContainerSupport"

@@ -5,6 +5,11 @@ spring:
   application:
     name: divtrack
 
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+
   datasource:
     url: jdbc:postgresql://localhost:5432/divtrack?currentSchema=public
     username: divtrack
