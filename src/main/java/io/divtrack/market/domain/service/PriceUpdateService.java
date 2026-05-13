@@ -46,6 +46,17 @@ public class PriceUpdateService {
                 stock.updatePrice(data.price(), data.yieldPct());
                 stock.setLastPriceUpdate(now);
                 updated++;
+            }
+        }
+
+        stockRepository.saveAll(stocks);
+        log.info("Refreshed prices for {}/{} stocks", updated, stocks.size());
+        broadcastPrices(stocks);
+    }
+
+    @Cacheable("stockPrices")
+    public List<Stock> getCachedStocks() {
+        return stockRepository.findAll();
     }
 
     private void broadcastPrices(List<Stock> stocks) {
@@ -63,16 +74,5 @@ public class PriceUpdateService {
                 log.warn("Failed to serialize price update for {}", stock.getTicker());
             }
         }
-    }
-        }
-
-        stockRepository.saveAll(stocks);
-        log.info("Refreshed prices for {}/{} stocks", updated, stocks.size());
-        broadcastPrices(stocks);
-    }
-
-    @Cacheable("stockPrices")
-    public List<Stock> getCachedStocks() {
-        return stockRepository.findAll();
     }
 }
