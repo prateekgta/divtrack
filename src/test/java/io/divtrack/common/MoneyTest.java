@@ -44,7 +44,7 @@ class MoneyTest {
         Money a = Money.usd(10);
         Money b = Money.usd(5);
         Money result = a.add(b);
-        assertEquals(new BigDecimal("15"), result.amount());
+        assertEquals(BigDecimal.valueOf(15.0), result.amount());
     }
 
     @Test
@@ -59,7 +59,7 @@ class MoneyTest {
         Money a = Money.usd(10);
         Money b = Money.usd(3);
         Money result = a.subtract(b);
-        assertEquals(new BigDecimal("7"), result.amount());
+        assertEquals(BigDecimal.valueOf(7.0), result.amount());
     }
 
     @Test
@@ -73,14 +73,14 @@ class MoneyTest {
     void multiplyByBigDecimal() {
         Money m = Money.usd(10);
         Money result = m.multiply(new BigDecimal("2.5"));
-        assertEquals(new BigDecimal("25.0"), result.amount());
+        assertEquals(new BigDecimal("25.00"), result.amount());
     }
 
     @Test
     void multiplyByDouble() {
         Money m = Money.usd(10);
         Money result = m.multiply(1.5);
-        assertEquals(new BigDecimal("15.0"), result.amount());
+        assertEquals(new BigDecimal("15.00"), result.amount());
     }
 
     @Test
@@ -118,7 +118,7 @@ class MoneyTest {
     @Test
     void amountGetter() {
         Money m = Money.usd(7);
-        assertEquals(new BigDecimal("7"), m.amount());
+        assertEquals(BigDecimal.valueOf(7.0), m.amount());
     }
 
     @Test

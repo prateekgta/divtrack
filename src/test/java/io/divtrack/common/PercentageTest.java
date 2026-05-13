@@ -16,13 +16,13 @@ class PercentageTest {
     @Test
     void constructWithFifty() {
         Percentage p = Percentage.of(50);
-        assertEquals(BigDecimal.valueOf(50), p.value());
+        assertEquals(BigDecimal.valueOf(50.0), p.value());
     }
 
     @Test
     void constructWithOneHundred() {
         Percentage p = Percentage.of(100);
-        assertEquals(BigDecimal.valueOf(100), p.value());
+        assertEquals(BigDecimal.valueOf(100.0), p.value());
     }
 
     @Test
