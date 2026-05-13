@@ -18,7 +18,7 @@ jobs:
           distribution: 'temurin'
           cache: 'maven'
       - name: Build and test
-        run: ./mvnw verify -Pci
+        run: mvn verify -Pci -B
         env:
           JWT_PRIVATE_KEY: dummy
           JWT_PUBLIC_KEY: dummy
