@@ -2,6 +2,7 @@ package io.divtrack.identity.interfaces.rest;
 
 import io.divtrack.identity.application.dto.*;
 import io.divtrack.identity.application.service.IdentityApplicationService;
+import io.divtrack.identity.domain.port.UserRepository;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -15,6 +16,7 @@ import org.springframework.web.bind.annotation.*;
 public class AuthController {
 
     private final IdentityApplicationService appService;
+    private final UserRepository userRepository;
 
     @PostMapping("/register")
     public ResponseEntity<AuthResponse> register(@Valid @RequestBody RegisterRequest req) {
@@ -53,5 +55,15 @@ public class AuthController {
     public ResponseEntity<Void> resetPassword(@Valid @RequestBody ResetPasswordRequest req) {
         appService.resetPassword(req);
         return ResponseEntity.ok().build();
+    }
+
+    // TEMPORARY: upgrade user to Pro
+    @PostMapping("/admin/upgrade/{email}")
+    public ResponseEntity<?> adminUpgrade(@PathVariable String email) {
+        var user = userRepository.findByEmail(email.toLowerCase().trim());
+        if (user.isEmpty()) return ResponseEntity.notFound().build();
+        user.get().upgradeToPro();
+        userRepository.save(user.get());
+        return ResponseEntity.ok("Upgraded " + email + " to PRO");
     }
 }

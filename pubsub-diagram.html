@@ -1,0 +1,801 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DivTrack — Live Price Pipeline</title>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body {
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  background: #0d1117; color: #e6edf3;
+  min-height: 100vh; overflow-x: hidden;
+}
+
+/* ── Header ── */
+.header {
+  background: #161b22; border-bottom: 1px solid #30363d;
+  padding: 16px 32px; display:flex; align-items:center; gap:12px;
+}
+.header h1 { font-size:18px; color:#58a6ff; }
+.header p  { font-size:12px; color:#8b949e; margin-top:2px; }
+
+/* ── Controls ── */
+.controls {
+  display:flex; gap:10px; padding:16px 32px;
+  background:#161b22; border-bottom:1px solid #30363d;
+  align-items:center; flex-wrap:wrap;
+}
+.btn {
+  padding:8px 18px; border-radius:8px; border:none;
+  cursor:pointer; font-size:13px; font-weight:600;
+  transition: all 0.2s;
+}
+.btn-play  { background:#238636; color:#fff; }
+.btn-play:hover  { background:#2ea043; }
+.btn-reset { background:#21262d; color:#e6edf3; border:1px solid #30363d; }
+.btn-reset:hover { background:#30363d; }
+.btn-step  { background:#1d4ed8; color:#fff; }
+.btn-step:hover  { background:#2563eb; }
+.step-label {
+  font-size:12px; color:#8b949e;
+  background:#0d1117; padding:6px 14px; border-radius:6px;
+  border:1px solid #30363d;
+}
+.speed-wrap { display:flex; align-items:center; gap:8px; font-size:12px; color:#8b949e; }
+.speed-wrap select {
+  background:#21262d; color:#e6edf3; border:1px solid #30363d;
+  padding:4px 8px; border-radius:6px; font-size:12px; cursor:pointer;
+}
+
+/* ── Main stage ── */
+.stage {
+  position:relative; width:100%;
+  min-height: 600px;
+  padding: 40px 32px;
+}
+
+/* ── Node boxes ── */
+.node {
+  position:absolute;
+  background:#161b22; border:2px solid #30363d;
+  border-radius:12px; padding:14px 18px;
+  text-align:center; min-width:140px;
+  transition: border-color 0.3s, box-shadow 0.3s;
+  z-index:10;
+}
+.node .icon  { font-size:28px; margin-bottom:6px; }
+.node .name  { font-size:13px; font-weight:700; }
+.node .sub   { font-size:11px; color:#8b949e; margin-top:3px; }
+.node .port  { font-size:10px; color:#58a6ff; font-family:monospace; margin-top:4px; }
+.node.active {
+  border-color:#58a6ff;
+  box-shadow: 0 0 20px rgba(88,166,255,0.3);
+}
+.node.pulse-green { border-color:#3fb950; box-shadow:0 0 20px rgba(63,185,80,0.4); }
+.node.pulse-red   { border-color:#f85149; box-shadow:0 0 20px rgba(248,81,73,0.4); }
+.node.pulse-yellow{ border-color:#d29922; box-shadow:0 0 20px rgba(210,153,34,0.4); }
+.node.pulse-purple{ border-color:#d2a8ff; box-shadow:0 0 20px rgba(210,168,255,0.4); }
+
+/* ── Positions ── */
+#node-market  { left:50%;  top:30px;   transform:translateX(-50%); }
+#node-redis   { left:50%;  top:210px;  transform:translateX(-50%); }
+#node-gateway { left:50%;  top:390px;  transform:translateX(-50%); }
+#node-b1      { left:10%;  top:555px; }
+#node-b2      { left:35%;  top:555px; }
+#node-b3      { left:60%;  top:555px; }
+#node-b4      { left:80%;  top:555px; }
+
+/* ── SVG canvas for lines ── */
+#svg-canvas {
+  position:absolute; top:0; left:0;
+  width:100%; height:100%;
+  pointer-events:none; z-index:1;
+}
+
+/* ── Animated particles ── */
+.particle {
+  position:absolute;
+  width:12px; height:12px; border-radius:50%;
+  z-index:20; pointer-events:none;
+  display:none;
+  box-shadow: 0 0 8px currentColor;
+}
+
+/* ── Code peek panel ── */
+.code-panel {
+  position:fixed; right:0; top:0; bottom:0; width:380px;
+  background:#161b22; border-left:1px solid #30363d;
+  transform:translateX(100%);
+  transition:transform 0.3s ease;
+  z-index:100; overflow-y:auto; padding:20px;
+}
+.code-panel.open { transform:translateX(0); }
+.code-panel h3   { font-size:14px; color:#58a6ff; margin-bottom:12px; }
+.code-panel pre  {
+  font-family:'Cascadia Code','Fira Code',monospace;
+  font-size:11px; line-height:1.6;
+  background:#0d1117; border:1px solid #30363d;
+  border-radius:8px; padding:14px; overflow-x:auto;
+  white-space:pre; color:#e6edf3;
+}
+.close-btn {
+  position:absolute; top:12px; right:12px;
+  background:#30363d; border:none; color:#e6edf3;
+  width:28px; height:28px; border-radius:6px; cursor:pointer;
+  font-size:14px;
+}
+.code-peek-btn {
+  font-size:10px; color:#58a6ff; cursor:pointer; margin-top:6px;
+  text-decoration:underline; display:block;
+}
+
+/* ── Step log ── */
+.log-panel {
+  background:#161b22; border-top:1px solid #30363d;
+  padding:16px 32px; min-height:120px;
+}
+.log-panel h3 { font-size:13px; color:#8b949e; margin-bottom:10px; }
+.log-entry {
+  font-size:12px; padding:6px 12px; border-radius:6px;
+  margin-bottom:6px; display:flex; gap:10px; align-items:flex-start;
+  animation: fadeIn 0.3s ease;
+}
+@keyframes fadeIn { from{opacity:0; transform:translateY(-4px)} to{opacity:1; transform:translateY(0)} }
+.log-entry .ts { color:#8b949e; font-family:monospace; flex-shrink:0; }
+.log-entry.info   { background:#0d1a30; border-left:3px solid #58a6ff; }
+.log-entry.success{ background:#0d2318; border-left:3px solid #3fb950; }
+.log-entry.warn   { background:#2a1e0d; border-left:3px solid #d29922; }
+.log-entry.redis  { background:#1a0d0d; border-left:3px solid #f85149; }
+
+/* ── Session registry visualizer ── */
+.registry-box {
+  position:absolute; right:20px; top:390px;
+  background:#0d1117; border:1px solid #30363d;
+  border-radius:8px; padding:12px; font-size:11px;
+  font-family:monospace; min-width:190px; z-index:10;
+}
+.registry-box h4 { color:#d29922; font-size:11px; margin-bottom:8px; }
+.reg-row { display:flex; gap:6px; align-items:center; margin-bottom:4px; }
+.reg-key { color:#d2a8ff; }
+.reg-val { color:#3fb950; }
+
+/* ── Redis payload bubble ── */
+.payload-bubble {
+  position:absolute; left:50%; top:310px;
+  transform:translateX(-50%);
+  background:#1a0d0d; border:1px solid #f85149;
+  border-radius:8px; padding:8px 14px;
+  font-size:11px; font-family:monospace; color:#ffa198;
+  z-index:15; opacity:0; transition:opacity 0.3s;
+  text-align:center; pointer-events:none;
+}
+
+/* ── Kw colors ── */
+.kw { color:#ff7b72; }
+.str{ color:#a5d6ff; }
+.cmt{ color:#8b949e; font-style:italic; }
+.ann{ color:#d2a8ff; }
+.met{ color:#d2a8ff; }
+.typ{ color:#79c0ff; }
+
+/* ── Label on connection lines ── */
+.line-label {
+  position:absolute; font-size:10px; color:#8b949e;
+  background:#0d1117; padding:2px 6px; border-radius:4px;
+  pointer-events:none; z-index:12;
+}
+
+/* ── Ticker tags ── */
+.ticker-tag {
+  display:inline-block; padding:2px 6px; border-radius:4px;
+  font-size:10px; font-family:monospace; font-weight:700;
+  margin-top:4px;
+}
+.tag-strc { background:#1a3a2a; color:#3fb950; border:1px solid #238636; }
+.tag-jepi { background:#1a2a3a; color:#58a6ff; border:1px solid #1d4ed8; }
+.tag-arcc { background:#2a1a3a; color:#d2a8ff; border:1px solid #7c3aed; }
+
+/* ── Highlight overlay on node ── */
+.node-status {
+  font-size:10px; margin-top:5px; padding:2px 8px;
+  border-radius:10px; display:inline-block;
+}
+.status-idle    { background:#21262d; color:#8b949e; }
+.status-working { background:#1a2a10; color:#3fb950; }
+.status-waiting { background:#1a1a2a; color:#58a6ff; }
+
+/* multi-gateway demo */
+.scale-note {
+  position:absolute; left:20px; top:390px;
+  background:#161b22; border:1px solid #30363d;
+  border-radius:8px; padding:10px 14px; font-size:11px;
+  color:#8b949e; max-width:170px; z-index:10; line-height:1.5;
+}
+.scale-note b { color:#d29922; }
+</style>
+</head>
+<body>
+
+<!-- Header -->
+<div class="header">
+  <div>
+    <h1>📡 DivTrack — Live Price Broadcasting Pipeline</h1>
+    <p>Redis Pub/Sub → Gateway WebSocket Fan-out → Browsers · Animated step-by-step</p>
+  </div>
+</div>
+
+<!-- Controls -->
+<div class="controls">
+  <button class="btn btn-play"  id="btnPlay">▶ Auto Play</button>
+  <button class="btn btn-step"  id="btnStep">→ Step</button>
+  <button class="btn btn-reset" id="btnReset">↺ Reset</button>
+  <div class="step-label" id="stepLabel">Step 0 / 7 — Press Play or Step</div>
+  <div class="speed-wrap">
+    Speed:
+    <select id="speedSel">
+      <option value="800">Fast</option>
+      <option value="1400" selected>Normal</option>
+      <option value="2200">Slow</option>
+    </select>
+  </div>
+  <button class="btn btn-reset" id="btnCode" style="background:#1a2a3a;border-color:#1d4ed8;color:#58a6ff;">📂 View Code</button>
+</div>
+
+<!-- Stage -->
+<div class="stage" id="stage">
+
+  <!-- SVG lines -->
+  <svg id="svg-canvas"></svg>
+
+  <!-- Market Data Node -->
+  <div class="node" id="node-market">
+    <div class="icon">📈</div>
+    <div class="name">Market Data Service</div>
+    <div class="sub">YahooFinanceScraper</div>
+    <div class="port">:8083</div>
+    <div class="node-status status-idle" id="status-market">idle</div>
+  </div>
+
+  <!-- Redis Node -->
+  <div class="node" id="node-redis">
+    <div class="icon">⚡</div>
+    <div class="name">Redis</div>
+    <div class="sub">Channel: prices:live</div>
+    <div class="port">:6379</div>
+    <div class="node-status status-idle" id="status-redis">idle</div>
+  </div>
+
+  <!-- Gateway Node -->
+  <div class="node" id="node-gateway">
+    <div class="icon">🚪</div>
+    <div class="name">Gateway</div>
+    <div class="sub">PriceFanOutHandler</div>
+    <div class="port">:3000</div>
+    <div class="node-status status-idle" id="status-gateway">idle</div>
+  </div>
+
+  <!-- Browsers -->
+  <div class="node" id="node-b1">
+    <div class="icon">🌐</div>
+    <div class="name">Browser A</div>
+    <span class="ticker-tag tag-strc">STRC</span>
+    <div class="node-status status-idle" id="status-b1">waiting</div>
+  </div>
+  <div class="node" id="node-b2">
+    <div class="icon">🌐</div>
+    <div class="name">Browser B</div>
+    <span class="ticker-tag tag-strc">STRC</span>
+    <span class="ticker-tag tag-arcc">ARCC</span>
+    <div class="node-status status-idle" id="status-b2">waiting</div>
+  </div>
+  <div class="node" id="node-b3">
+    <div class="icon">🌐</div>
+    <div class="name">Browser C</div>
+    <span class="ticker-tag tag-jepi">JEPI</span>
+    <div class="node-status status-idle" id="status-b3">waiting</div>
+  </div>
+  <div class="node" id="node-b4">
+    <div class="icon">🌐</div>
+    <div class="name">Browser D</div>
+    <span class="ticker-tag tag-strc">STRC</span>
+    <div class="node-status status-idle" id="status-b4">waiting</div>
+  </div>
+
+  <!-- Session Registry -->
+  <div class="registry-box" id="registry-box">
+    <h4>📋 SessionRegistry</h4>
+    <div class="reg-row"><span class="reg-key">"STRC"</span><span>→</span><span class="reg-val" id="reg-strc">[A, B, D]</span></div>
+    <div class="reg-row"><span class="reg-key">"ARCC"</span><span>→</span><span class="reg-val" id="reg-arcc">[B]</span></div>
+    <div class="reg-row"><span class="reg-key">"JEPI"</span><span>→</span><span class="reg-val" id="reg-jepi">[C]</span></div>
+  </div>
+
+  <!-- Scale note -->
+  <div class="scale-note">
+    <b>⚡ Why Redis?</b><br>
+    2 gateway pods? Each subscribes independently. Both receive every message. No coordination needed.
+  </div>
+
+  <!-- Redis payload bubble -->
+  <div class="payload-bubble" id="payload-bubble">
+    {"ticker":"STRC","price":99.8,"yield":11.5}
+  </div>
+
+  <!-- Particles (injected by JS) -->
+</div>
+
+<!-- Log panel -->
+<div class="log-panel">
+  <h3>📜 Step-by-step log</h3>
+  <div id="log-container"></div>
+</div>
+
+<!-- Code panel -->
+<div class="code-panel" id="codePanel">
+  <button class="close-btn" id="closeCode">✕</button>
+  <h3>📂 Gateway Source Code</h3>
+
+  <h3 style="color:#d29922; margin-top:16px;">RedisSubscriberConfig.java</h3>
+  <pre><span class="ann">@Bean</span>
+<span class="kw">public</span> ReactiveRedisMessageListenerContainer
+    priceListenerContainer(...) {
+
+  container
+    .receive(ChannelTopic.of(<span class="str">"prices:live"</span>))
+    .map(msg -> msg.getMessage())
+    .flatMap(json -> {
+      String ticker = objectMapper
+        .readTree(json)
+        .path(<span class="str">"ticker"</span>).asText();
+
+      <span class="kw">return</span> fanOutHandler
+        .fanOut(ticker, json); <span class="cmt">// ← THE BRIDGE</span>
+    })
+    .retry() <span class="cmt">// reconnect if Redis drops</span>
+    .subscribe();
+
+  <span class="kw">return</span> container;
+}</pre>
+
+  <h3 style="color:#d29922; margin-top:16px;">PriceFanOutHandler.java</h3>
+  <pre><span class="kw">public</span> <span class="typ">Mono</span>&lt;<span class="typ">Void</span>&gt; fanOut(
+    String ticker, String jsonMsg) {
+
+  <span class="kw">var</span> sessions =
+    registry.getSessionsFor(ticker);
+
+  <span class="kw">if</span> (sessions.isEmpty())
+    <span class="kw">return</span> <span class="typ">Mono</span>.empty();
+
+  <span class="kw">return</span> <span class="typ">Flux</span>.fromIterable(sessions)
+    .flatMap(session ->
+      session.send(
+        <span class="typ">Mono</span>.just(
+          session.textMessage(jsonMsg)
+        )
+      )
+      .onErrorResume(e -> {
+        registry.deregister(session);
+        <span class="kw">return</span> <span class="typ">Mono</span>.empty();
+      })
+    ).then();
+}</pre>
+
+  <h3 style="color:#d29922; margin-top:16px;">SessionRegistry.java</h3>
+  <pre><span class="cmt">// ticker → set of live WS sessions</span>
+<span class="kw">private final</span> <span class="typ">Map</span>&lt;String,
+  <span class="typ">CopyOnWriteArraySet</span>&lt;<span class="typ">WebSocketSession</span>&gt;&gt;
+  tickerSessions = <span class="kw">new</span> <span class="typ">ConcurrentHashMap</span>&lt;&gt;();
+
+<span class="kw">public void</span> register(
+    String ticker, <span class="typ">WebSocketSession</span> session) {
+  tickerSessions
+    .computeIfAbsent(
+      ticker.toUpperCase(),
+      k -> <span class="kw">new</span> <span class="typ">CopyOnWriteArraySet</span>&lt;&gt;()
+    )
+    .add(session);
+}
+
+<span class="kw">public</span> <span class="typ">Set</span>&lt;<span class="typ">WebSocketSession</span>&gt;
+    getSessionsFor(String ticker) {
+  <span class="kw">return</span> tickerSessions.getOrDefault(
+    ticker.toUpperCase(),
+    <span class="typ">Collections</span>.emptySet()
+  );
+}</pre>
+</div>
+
+<script>
+// ══════════════════════════════════════════════
+// State
+// ══════════════════════════════════════════════
+let currentStep = 0;
+let autoTimer   = null;
+let isPlaying   = false;
+const STEPS     = 7;
+
+function speed() {
+  return parseInt(document.getElementById('speedSel').value);
+}
+
+// ══════════════════════════════════════════════
+// Draw static SVG connection lines
+// ══════════════════════════════════════════════
+function getCenter(el) {
+  const stage  = document.getElementById('stage');
+  const sr     = stage.getBoundingClientRect();
+  const er     = el.getBoundingClientRect();
+  return {
+    x: er.left - sr.left + er.width  / 2,
+    y: er.top  - sr.top  + er.height / 2
+  };
+}
+
+function drawLines() {
+  const svg = document.getElementById('svg-canvas');
+  svg.innerHTML = '';
+
+  const pairs = [
+    ['node-market',  'node-redis',   '#30363d', '5,5'],
+    ['node-redis',   'node-gateway', '#30363d', '5,5'],
+    ['node-gateway', 'node-b1',      '#21262d', '3,4'],
+    ['node-gateway', 'node-b2',      '#21262d', '3,4'],
+    ['node-gateway', 'node-b3',      '#21262d', '3,4'],
+    ['node-gateway', 'node-b4',      '#21262d', '3,4'],
+  ];
+
+  pairs.forEach(([a, b, color, dash]) => {
+    const na = document.getElementById(a);
+    const nb = document.getElementById(b);
+    if (!na || !nb) return;
+    const ca = getCenter(na), cb = getCenter(nb);
+
+    const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+    line.setAttribute('x1', ca.x); line.setAttribute('y1', ca.y);
+    line.setAttribute('x2', cb.x); line.setAttribute('y2', cb.y);
+    line.setAttribute('stroke', color);
+    line.setAttribute('stroke-width', '2');
+    line.setAttribute('stroke-dasharray', dash);
+    line.setAttribute('id', `line-${a}-${b}`);
+    svg.appendChild(line);
+  });
+}
+
+// ══════════════════════════════════════════════
+// Animate a particle along a path
+// ══════════════════════════════════════════════
+function animateParticle(fromId, toId, color, label, onDone) {
+  const stage = document.getElementById('stage');
+  const from  = document.getElementById(fromId);
+  const to    = document.getElementById(toId);
+  if (!from || !to) { if(onDone) onDone(); return; }
+
+  const fc = getCenter(from);
+  const tc = getCenter(to);
+
+  const p = document.createElement('div');
+  p.className = 'particle';
+  p.style.cssText = `
+    background:${color}; display:block;
+    left:${fc.x - 6}px; top:${fc.y - 6}px;
+    color:${color};
+  `;
+  stage.appendChild(p);
+
+  // tooltip
+  if (label) {
+    const tip = document.createElement('div');
+    tip.style.cssText = `
+      position:absolute; z-index:30;
+      background:#0d1117; border:1px solid ${color};
+      border-radius:6px; padding:3px 8px;
+      font-size:10px; font-family:monospace; color:${color};
+      left:${fc.x + 10}px; top:${fc.y - 18}px;
+      pointer-events:none; white-space:nowrap;
+    `;
+    tip.textContent = label;
+    tip.id = 'tip-' + Date.now();
+    stage.appendChild(tip);
+    setTimeout(() => tip.remove(), speed() * 1.2);
+  }
+
+  const dur   = speed() * 0.7;
+  const steps = 40;
+  let   i     = 0;
+
+  const iv = setInterval(() => {
+    i++;
+    const t  = i / steps;
+    const cx = fc.x + (tc.x - fc.x) * t;
+    const cy = fc.y + (tc.y - fc.y) * t;
+    p.style.left = (cx - 6) + 'px';
+    p.style.top  = (cy - 6) + 'px';
+    p.style.opacity = i < steps ? '1' : '0';
+    if (i >= steps) {
+      clearInterval(iv);
+      p.remove();
+      if (onDone) onDone();
+    }
+  }, dur / steps);
+}
+
+// ══════════════════════════════════════════════
+// Highlight a node temporarily
+// ══════════════════════════════════════════════
+function pulse(id, cls, dur=1200) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.classList.add(cls);
+  setTimeout(() => el.classList.remove(cls), dur);
+}
+
+function setStatus(id, text, cls) {
+  const el = document.getElementById('status-' + id);
+  if (!el) return;
+  el.textContent  = text;
+  el.className    = 'node-status ' + cls;
+}
+
+// ══════════════════════════════════════════════
+// Logging
+// ══════════════════════════════════════════════
+function log(msg, type='info') {
+  const c   = document.getElementById('log-container');
+  const d   = new Date();
+  const ts  = d.toTimeString().slice(0,8);
+  const row = document.createElement('div');
+  row.className = 'log-entry ' + type;
+  row.innerHTML = `<span class="ts">${ts}</span><span>${msg}</span>`;
+  c.prepend(row);
+  // keep last 12
+  while (c.children.length > 12) c.removeChild(c.lastChild);
+}
+
+// ══════════════════════════════════════════════
+// Step definitions
+// ══════════════════════════════════════════════
+const stepDefs = [
+  // Step 1: browsers connect
+  () => {
+    setStepLabel(1, 'Browsers connect via WebSocket');
+    pulse('node-gateway', 'active');
+    ['b1','b2','b3','b4'].forEach((b,i) => {
+      setTimeout(() => {
+        animateParticle('node-'+b, 'node-gateway', '#3fb950',
+          b==='b1'?'WS /ws?tickers=STRC':
+          b==='b2'?'WS /ws?tickers=STRC,ARCC':
+          b==='b3'?'WS /ws?tickers=JEPI':
+                   'WS /ws?tickers=STRC'
+        );
+        setStatus(b, 'connected', 'status-working');
+      }, i * 200);
+    });
+    setStatus('gateway', 'accepting WS', 'status-working');
+    log('🌐 Browsers A,B,C,D connect via WebSocket to Gateway /ws', 'info');
+    log('📋 SessionRegistry updated: STRC→[A,B,D]  ARCC→[B]  JEPI→[C]', 'success');
+    setTimeout(nextStep, speed() * 1.8);
+  },
+
+  // Step 2: market scrapes
+  () => {
+    setStepLabel(2, 'Market Data Service scrapes Yahoo Finance');
+    pulse('node-market', 'pulse-green');
+    setStatus('market', 'scraping...', 'status-working');
+    log('📈 Market Data Service: @Scheduled every 60s — scraping STRC, JEPI, ARCC...', 'info');
+    log('💾 Prices saved to market.price_history in PostgreSQL', 'success');
+    setTimeout(nextStep, speed() * 1.4);
+  },
+
+  // Step 3: publish to Redis
+  () => {
+    setStepLabel(3, 'PUBLISH to Redis prices:live');
+    pulse('node-redis', 'pulse-red');
+    setStatus('market', 'publishing', 'status-working');
+
+    animateParticle('node-market', 'node-redis', '#f85149',
+      'PUBLISH prices:live', () => {
+        document.getElementById('payload-bubble').style.opacity = '1';
+        setTimeout(() => {
+          document.getElementById('payload-bubble').style.opacity = '0';
+        }, speed() * 1.2);
+        pulse('node-redis', 'pulse-red', 1000);
+        setStatus('redis', 'received!', 'status-working');
+      }
+    );
+    log('🔴 PUBLISH prices:live → {"ticker":"STRC","price":99.8,"yield":11.5}', 'redis');
+    log('⚡ Redis push model — ALL subscribers receive instantly, no polling', 'warn');
+    setTimeout(nextStep, speed() * 1.6);
+  },
+
+  // Step 4: Redis → Gateway
+  () => {
+    setStepLabel(4, 'Redis pushes to Gateway (RedisSubscriberConfig)');
+    animateParticle('node-redis', 'node-gateway', '#f85149',
+      'PUSH prices:live', () => {
+        pulse('node-gateway', 'pulse-yellow', 1200);
+        setStatus('gateway', 'received msg', 'status-working');
+      }
+    );
+    log('📥 Gateway RedisSubscriberConfig.receive() — message delivered by Redis', 'redis');
+    log('🔍 Parse JSON: objectMapper.readTree(json).path("ticker").asText() → "STRC"', 'info');
+    setTimeout(nextStep, speed() * 1.5);
+  },
+
+  // Step 5: Registry lookup
+  () => {
+    setStepLabel(5, 'SessionRegistry lookup — who watches STRC?');
+    pulse('node-gateway', 'pulse-yellow');
+
+    // highlight registry
+    const reg = document.getElementById('registry-box');
+    reg.style.borderColor = '#d29922';
+    reg.style.boxShadow   = '0 0 16px rgba(210,153,34,0.4)';
+    setTimeout(() => {
+      reg.style.borderColor = '#30363d';
+      reg.style.boxShadow   = 'none';
+    }, 1400);
+
+    document.getElementById('reg-strc').style.color = '#f5a623';
+    setTimeout(() => {
+      document.getElementById('reg-strc').style.color = '#3fb950';
+    }, 1400);
+
+    setStatus('gateway', 'lookup sessions', 'status-working');
+    log('🗂 registry.getSessionsFor("STRC") → [sessionA, sessionB, sessionD]', 'warn');
+    log('✅ 3 sessions found watching STRC — skipping Browser C (watching JEPI)', 'success');
+    setTimeout(nextStep, speed() * 1.4);
+  },
+
+  // Step 6: fan-out
+  () => {
+    setStepLabel(6, 'Fan-out — send to STRC browsers only');
+    setStatus('gateway', 'fanning out', 'status-working');
+
+    // send only to b1, b2, b4 (STRC watchers)
+    const targets = [
+      { id:'node-b1', statusId:'b1', delay:0 },
+      { id:'node-b2', statusId:'b2', delay:200 },
+      { id:'node-b4', statusId:'b4', delay:400 },
+    ];
+    targets.forEach(({id, statusId, delay}) => {
+      setTimeout(() => {
+        animateParticle('node-gateway', id, '#3fb950',
+          '{price:99.8}', () => {
+            pulse(id.replace('node-','node-'), 'pulse-green');
+            setStatus(statusId, '📊 updated!', 'status-working');
+          }
+        );
+      }, delay);
+    });
+
+    // b3 stays dark
+    setStatus('b3', 'no STRC update', 'status-idle');
+
+    log('📤 Flux.fromIterable([A,B,D]).flatMap(session → session.send(jsonMsg))', 'info');
+    log('✅ Browser A ← STRC price update sent', 'success');
+    log('✅ Browser B ← STRC price update sent', 'success');
+    log('✅ Browser D ← STRC price update sent', 'success');
+    log('⏭ Browser C skipped — not watching STRC', 'warn');
+    setTimeout(nextStep, speed() * 1.8);
+  },
+
+  // Step 7: browser UI updates
+  () => {
+    setStepLabel(7, 'Browser UI updates live — zero polling!');
+    ['b1','b2','b4'].forEach(b => {
+      pulse('node-'+b, 'pulse-green', 2000);
+      setStatus(b, '✨ UI updated', 'status-working');
+    });
+    setStatus('gateway', 'done', 'status-idle');
+    setStatus('market', 'idle', 'status-idle');
+    setStatus('redis', 'idle', 'status-idle');
+    log('🎉 All 3 STRC browsers received live price update via WebSocket push', 'success');
+    log('🔁 Cycle repeats every 60s — or whenever market data publishes', 'info');
+    log('📡 Browser C will update when JEPI price is published next', 'warn');
+    isPlaying = false;
+    document.getElementById('btnPlay').textContent = '▶ Auto Play';
+  }
+];
+
+// ══════════════════════════════════════════════
+// Step runner
+// ══════════════════════════════════════════════
+function setStepLabel(n, txt) {
+  document.getElementById('stepLabel').textContent =
+    `Step ${n} / ${STEPS} — ${txt}`;
+}
+
+function runStep(n) {
+  if (n < 1 || n > STEPS) return;
+  stepDefs[n-1]();
+}
+
+function nextStep() {
+  if (currentStep >= STEPS) {
+    isPlaying = false;
+    document.getElementById('btnPlay').textContent = '▶ Auto Play';
+    return;
+  }
+  currentStep++;
+  runStep(currentStep);
+}
+
+// ══════════════════════════════════════════════
+// Buttons
+// ══════════════════════════════════════════════
+document.getElementById('btnStep').addEventListener('click', () => {
+  if (isPlaying) return;
+  if (currentStep >= STEPS) return;
+  currentStep++;
+  runStep(currentStep);
+});
+
+document.getElementById('btnPlay').addEventListener('click', () => {
+  if (isPlaying) {
+    isPlaying = false;
+    document.getElementById('btnPlay').textContent = '▶ Auto Play';
+    return;
+  }
+  if (currentStep >= STEPS) return;
+  isPlaying = true;
+  document.getElementById('btnPlay').textContent = '⏸ Pause';
+
+  function playNext() {
+    if (!isPlaying || currentStep >= STEPS) {
+      isPlaying = false;
+      document.getElementById('btnPlay').textContent = '▶ Auto Play';
+      return;
+    }
+    currentStep++;
+    runStep(currentStep);
+    if (currentStep < STEPS) {
+      autoTimer = setTimeout(playNext, speed() * 2.2);
+    } else {
+      isPlaying = false;
+      document.getElementById('btnPlay').textContent = '▶ Auto Play';
+    }
+  }
+  playNext();
+});
+
+document.getElementById('btnReset').addEventListener('click', () => {
+  clearTimeout(autoTimer);
+  isPlaying   = false;
+  currentStep = 0;
+  document.getElementById('btnPlay').textContent = '▶ Auto Play';
+  document.getElementById('stepLabel').textContent = 'Step 0 / 7 — Press Play or Step';
+  document.getElementById('log-container').innerHTML = '';
+  document.getElementById('payload-bubble').style.opacity = '0';
+
+  // reset node states
+  ['market','redis','gateway','b1','b2','b3','b4'].forEach(id => {
+    const el = document.getElementById('node-'+id);
+    if (el) el.className = 'node';
+    setStatus(id, id.startsWith('b') ? 'waiting' : 'idle',
+      id.startsWith('b') ? 'status-waiting' : 'status-idle');
+  });
+
+  document.getElementById('reg-strc').style.color = '#3fb950';
+
+  // remove stray particles
+  document.querySelectorAll('.particle').forEach(p => p.remove());
+});
+
+document.getElementById('btnCode').addEventListener('click', () => {
+  document.getElementById('codePanel').classList.toggle('open');
+});
+document.getElementById('closeCode').addEventListener('click', () => {
+  document.getElementById('codePanel').classList.remove('open');
+});
+
+// ══════════════════════════════════════════════
+// Init
+// ══════════════════════════════════════════════
+window.addEventListener('load', () => {
+  setTimeout(drawLines, 100);
+});
+window.addEventListener('resize', drawLines);
+</script>
+</body>
+</html>
