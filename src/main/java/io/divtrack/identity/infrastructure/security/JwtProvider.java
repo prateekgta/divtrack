@@ -85,7 +85,7 @@ public class JwtProvider {
             return generateTempKeyPair();
         }
         try {
-            return new KeyPair(parsePrivateKey(privateKeyPem), parsePublicKey(publicKeyPem));
+            return new KeyPair(parsePublicKey(publicKeyPem), parsePrivateKey(privateKeyPem));
         } catch (Exception e) {
             log.warn("Failed to parse JWT keys from env, generating temp keys: {}", e.getMessage());
             return generateTempKeyPair();
