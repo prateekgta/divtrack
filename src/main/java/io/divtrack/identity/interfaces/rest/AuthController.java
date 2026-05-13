@@ -6,10 +6,12 @@ import io.divtrack.identity.domain.port.UserRepository;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+@Slf4j
 @RestController
 @RequestMapping("/api/auth")
 @RequiredArgsConstructor
@@ -60,10 +62,23 @@ public class AuthController {
     // TEMPORARY: upgrade user to Pro
     @PostMapping("/admin/upgrade/{email}")
     public ResponseEntity<?> adminUpgrade(@PathVariable String email) {
-        var user = userRepository.findByEmail(email.toLowerCase().trim());
-        if (user.isEmpty()) return ResponseEntity.notFound().build();
-        user.get().upgradeToPro();
-        userRepository.save(user.get());
-        return ResponseEntity.ok("Upgraded " + email + " to PRO");
+        log.info("Admin upgrade requested for: {}", email);
+        try {
+            var normalized = email.toLowerCase().trim();
+            var userOpt = userRepository.findByEmail(normalized);
+            if (userOpt.isEmpty()) {
+                log.warn("User not found: {}", normalized);
+                return ResponseEntity.notFound().build();
+            }
+            var user = userOpt.get();
+            log.info("Found user: {}, current plan: {}", user.getEmail(), user.getPlan());
+            user.upgradeToPro();
+            userRepository.save(user);
+            log.info("Upgraded {} to PRO", email);
+            return ResponseEntity.ok("Upgraded " + email + " to PRO");
+        } catch (Exception e) {
+            log.error("Failed to upgrade {}: {}", email, e.getMessage(), e);
+            throw e;
+        }
     }
 }
