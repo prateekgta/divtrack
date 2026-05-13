@@ -2,23 +2,19 @@ package io.divtrack.identity.interfaces.rest;
 
 import io.divtrack.identity.application.dto.*;
 import io.divtrack.identity.application.service.IdentityApplicationService;
-import io.divtrack.identity.domain.port.UserRepository;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-@Slf4j
 @RestController
 @RequestMapping("/api/auth")
 @RequiredArgsConstructor
 public class AuthController {
 
     private final IdentityApplicationService appService;
-    private final UserRepository userRepository;
 
     @PostMapping("/register")
     public ResponseEntity<AuthResponse> register(@Valid @RequestBody RegisterRequest req) {
@@ -57,28 +53,5 @@ public class AuthController {
     public ResponseEntity<Void> resetPassword(@Valid @RequestBody ResetPasswordRequest req) {
         appService.resetPassword(req);
         return ResponseEntity.ok().build();
-    }
-
-    // TEMPORARY: upgrade user to Pro
-    @PostMapping("/admin/upgrade/{email}")
-    public ResponseEntity<?> adminUpgrade(@PathVariable String email) {
-        log.info("Admin upgrade requested for: {}", email);
-        try {
-            var normalized = email.toLowerCase().trim();
-            var userOpt = userRepository.findByEmail(normalized);
-            if (userOpt.isEmpty()) {
-                log.warn("User not found: {}", normalized);
-                return ResponseEntity.notFound().build();
-            }
-            var user = userOpt.get();
-            log.info("Found user: {}, current plan: {}", user.getEmail(), user.getPlan());
-            user.upgradeToPro();
-            userRepository.save(user);
-            log.info("Upgraded {} to PRO", email);
-            return ResponseEntity.ok("Upgraded " + email + " to PRO");
-        } catch (Exception e) {
-            log.error("Failed to upgrade {}: {}", email, e.getMessage(), e);
-            throw e;
-        }
     }
 }
