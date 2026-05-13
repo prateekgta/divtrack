@@ -34,33 +34,9 @@ public class JwtProvider {
             @Value("${app.jwt.expiry-minutes:15}") long expiryMinutes
     ) {
         this.expiryMinutes = expiryMinutes;
-        if (privateKeyPem == null || privateKeyPem.isBlank() || publicKeyPem == null || publicKeyPem.isBlank()) {
-            try {
-                KeyPairGenerator gen = KeyPairGenerator.getInstance("RSA");
-                gen.initialize(2048);
-                KeyPair pair = gen.generateKeyPair();
-                this.privateKey = (RSAPrivateKey) pair.getPrivate();
-                this.publicKey = (RSAPublicKey) pair.getPublic();
-            } catch (Exception e) {
-                throw new IllegalStateException("Failed to generate temporary JWT RSA keys", e);
-            }
-        } else {
-            try {
-                this.privateKey = parsePrivateKey(privateKeyPem);
-                this.publicKey = parsePublicKey(publicKeyPem);
-            } catch (Exception e) {
-                log.warn("Failed to parse JWT keys from env, generating temp keys: {}", e.getMessage());
-                try {
-                    KeyPairGenerator gen = KeyPairGenerator.getInstance("RSA");
-                    gen.initialize(2048);
-                    KeyPair pair = gen.generateKeyPair();
-                    this.privateKey = (RSAPrivateKey) pair.getPrivate();
-                    this.publicKey = (RSAPublicKey) pair.getPublic();
-                } catch (Exception e2) {
-                    throw new IllegalStateException("Failed to generate temporary JWT RSA keys", e2);
-                }
-            }
-        }
+        KeyPair pair = loadKeyPair(privateKeyPem, publicKeyPem);
+        this.privateKey = (RSAPrivateKey) pair.getPrivate();
+        this.publicKey = (RSAPublicKey) pair.getPublic();
     }
 
     public String generateAccessToken(User user) {
@@ -91,6 +67,28 @@ public class JwtProvider {
             return validateAndExtract(token);
         } catch (JwtException | IllegalArgumentException e) {
             return null;
+        }
+    }
+
+    private static KeyPair generateTempKeyPair() {
+        try {
+            KeyPairGenerator gen = KeyPairGenerator.getInstance("RSA");
+            gen.initialize(2048);
+            return gen.generateKeyPair();
+        } catch (Exception e) {
+            throw new IllegalStateException("Failed to generate temporary JWT RSA keys", e);
+        }
+    }
+
+    private KeyPair loadKeyPair(String privateKeyPem, String publicKeyPem) {
+        if (privateKeyPem == null || privateKeyPem.isBlank() || publicKeyPem == null || publicKeyPem.isBlank()) {
+            return generateTempKeyPair();
+        }
+        try {
+            return new KeyPair(parsePrivateKey(privateKeyPem), parsePublicKey(publicKeyPem));
+        } catch (Exception e) {
+            log.warn("Failed to parse JWT keys from env, generating temp keys: {}", e.getMessage());
+            return generateTempKeyPair();
         }
     }
 
