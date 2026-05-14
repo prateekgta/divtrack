@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+    <springProperty name="app" source="spring.application.name" defaultValue="divtrack"/>
+    <springProperty name="lokiUrl" source="app.observability.loki-url" defaultValue=""/>
+    <springProperty name="lokiUser" source="app.observability.loki-user" defaultValue=""/>
+    <springProperty name="lokiToken" source="app.observability.loki-token" defaultValue=""/>
+
+    <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder class="net.logstash.logback.encoder.LogstashEncoder">
+            <fieldNames>
+                <timestamp>@timestamp</timestamp>
+                <version>[ignore]</version>
+                <levelValue>[ignore]</levelValue>
+                <logger>logger.name</logger>
+            </fieldNames>
+            <throwableConverter class="net.logstash.logback.stacktrace.ShortenedThrowableConverter">
+                <maxDepthPerThrowable>30</maxDepthPerThrowable>
+                <maxLength>2048</maxLength>
+                <shortenedClassNameLength>40</shortenedClassNameLength>
+            </throwableConverter>
+        </encoder>
+    </appender>
+
+    <appender name="LOKI" class="com.github.loki4j.logback.Loki4jAppender">
+        <http class="com.github.loki4j.logback.HttpSender">
+            <url>${lokiUrl}</url>
+            <username>${lokiUser}</username>
+            <auth>${lokiToken}</auth>
+            <connectionTimeoutMs>5000</connectionTimeoutMs>
+            <requestTimeoutMs>5000</requestTimeoutMs>
+        </http>
+        <format>
+            <label>
+                <pattern>app=${app},host=${HOSTNAME:-unknown}</pattern>
+            </label>
+            <message class="net.logstash.logback.encoder.LogstashEncoder"/>
+        </format>
+        <filter class="ch.qos.logback.classic.filter.ThresholdFilter">
+            <level>INFO</level>
+        </filter>
+    </appender>
+
+    <root level="INFO">
+        <appender-ref ref="CONSOLE"/>
+        <appender-ref ref="LOKI"/>
+    </root>
+</configuration>

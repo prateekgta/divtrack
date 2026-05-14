@@ -69,13 +69,15 @@ app:
     success-url: ${STRIPE_SUCCESS_URL:http://localhost:3000/dashboard}
     cancel-url: ${STRIPE_CANCEL_URL:http://localhost:3000/pricing}
 
+  observability:
+    loki-url: ${LOKI_URL:}
+    loki-user: ${LOKI_USER:}
+    loki-token: ${LOKI_TOKEN:}
+
 logging:
   level:
     io.divtrack: INFO
     org.springframework.security: WARN
-  structured:
-    format:
-      console: logstash
 
 management:
   endpoints:
