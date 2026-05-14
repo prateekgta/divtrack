@@ -78,6 +78,9 @@ logging:
   level:
     io.divtrack: INFO
     org.springframework.security: WARN
+  structured:
+    format:
+      console: logstash
 
 management:
   endpoints:
