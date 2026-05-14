@@ -38,9 +38,19 @@ jobs:
           npm run build
 
       - name: Deploy to Render
-        run: curl -sf -X POST "${{ secrets.RENDER_DEPLOY_HOOK }}"
+        id: deploy
+        env:
+          HOOK: ${{ secrets.RENDER_DEPLOY_HOOK }}
+        run: |
+          if [ -z "$HOOK" ]; then
+            echo "RENDER_DEPLOY_HOOK not set — skipping deploy"
+            echo "skipped=true" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+          curl -sf -X POST "$HOOK"
 
       - name: Health check (5 min timeout)
+        if: steps.deploy.outputs.skipped != 'true'
         run: |
           URL="https://divtrack-backend-8quu.onrender.com/api/health"
           for i in $(seq 30); do
@@ -57,16 +67,15 @@ jobs:
           exit 1
 
       - name: Rollback on failure
-        if: failure()
+        if: failure() && steps.deploy.outcome == 'failure'
         env:
-          RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
-          RENDER_SERVICE_ID: ${{ secrets.RENDER_SERVICE_ID }}
+          API_KEY: ${{ secrets.RENDER_API_KEY }}
+          SERVICE_ID: ${{ secrets.RENDER_SERVICE_ID }}
         run: |
-          if [ -z "$RENDER_API_KEY" ] || [ -z "$RENDER_SERVICE_ID" ]; then
-            echo "RENDER_API_KEY or RENDER_SERVICE_ID not set — manual rollback required"
-            echo "Go to: https://dashboard.render.com/web/$RENDER_SERVICE_ID → deploys → rollback"
+          if [ -z "$API_KEY" ] || [ -z "$SERVICE_ID" ]; then
+            echo "RENDER_API_KEY or RENDER_SERVICE_ID not set — go to Render dashboard to rollback manually"
             exit 1
           fi
           echo "Rolling back to previous deploy..."
-          curl -sf -X POST "https://api.render.com/v1/services/$RENDER_SERVICE_ID/rollback" \
-            -H "Authorization: Bearer $RENDER_API_KEY"
+          curl -sf -X POST "https://api.render.com/v1/services/$SERVICE_ID/rollback" \
+            -H "Authorization: Bearer $API_KEY"
