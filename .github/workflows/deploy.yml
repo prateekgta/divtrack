@@ -1,0 +1,72 @@
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  test-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+          cache: 'maven'
+
+      - name: Build and test backend
+        run: mvn verify -Pci -B
+        env:
+          JWT_PRIVATE_KEY: dummy
+          JWT_PUBLIC_KEY: dummy
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Build frontend
+        working-directory: ./frontend
+        run: |
+          npm ci
+          npx next lint --no-cache 2>/dev/null || true
+          npm run build
+
+      - name: Deploy to Render
+        run: curl -sf -X POST "${{ secrets.RENDER_DEPLOY_HOOK }}"
+
+      - name: Health check (5 min timeout)
+        run: |
+          URL="https://divtrack-backend-8quu.onrender.com/api/health"
+          for i in $(seq 30); do
+            STATUS=$(curl -so /tmp/health.json -w '%{http_code}' "$URL")
+            if [ "$STATUS" = "200" ]; then
+              echo "Health check passed (attempt $i)"
+              cat /tmp/health.json
+              exit 0
+            fi
+            echo "Attempt $i: HTTP $STATUS, retrying in 10s..."
+            sleep 10
+          done
+          echo "Health check failed after 5 minutes"
+          exit 1
+
+      - name: Rollback on failure
+        if: failure()
+        env:
+          RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+          RENDER_SERVICE_ID: ${{ secrets.RENDER_SERVICE_ID }}
+        run: |
+          if [ -z "$RENDER_API_KEY" ] || [ -z "$RENDER_SERVICE_ID" ]; then
+            echo "RENDER_API_KEY or RENDER_SERVICE_ID not set — manual rollback required"
+            echo "Go to: https://dashboard.render.com/web/$RENDER_SERVICE_ID → deploys → rollback"
+            exit 1
+          fi
+          echo "Rolling back to previous deploy..."
+          curl -sf -X POST "https://api.render.com/v1/services/$RENDER_SERVICE_ID/rollback" \
+            -H "Authorization: Bearer $RENDER_API_KEY"
