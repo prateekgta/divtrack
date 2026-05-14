@@ -73,15 +73,26 @@ logging:
   level:
     io.divtrack: INFO
     org.springframework.security: WARN
+  structured:
+    format:
+      console: logstash
 
 management:
   endpoints:
     web:
       exposure:
-        include: health, info, metrics
+        include: health, info, metrics, prometheus
   endpoint:
     health:
       show-details: when-authorized
+    prometheus:
+      enabled: true
+  metrics:
+    tags:
+      application: ${spring.application.name}
+    export:
+      prometheus:
+        enabled: true
   info:
     env:
       enabled: true
