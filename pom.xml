@@ -144,6 +144,12 @@
             <version>1.6.0</version>
         </dependency>
 
+        <!-- OpenTelemetry metrics for Grafana Cloud (push-based) -->
+        <dependency>
+            <groupId>io.micrometer</groupId>
+            <artifactId>micrometer-registry-otlp</artifactId>
+        </dependency>
+
         <!-- Stripe -->
         <dependency>
             <groupId>com.stripe</groupId>

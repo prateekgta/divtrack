@@ -98,6 +98,12 @@ management:
     export:
       prometheus:
         enabled: true
+      otlp:
+        enabled: ${OTLP_ENABLED:false}
+        url: ${OTLP_URL:https://otlp-gateway-prod-us-west-0.grafana.net/otlp}
+        step: 30s
+        headers:
+          Authorization: ${OTLP_AUTH_HEADER:}
   info:
     env:
       enabled: true
